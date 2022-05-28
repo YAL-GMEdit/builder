@@ -108,7 +108,7 @@ class BuilderCompile {
         // Check for GMAssetCompiler and Runner files!
         let GMAssetCompilerDirOrig = Builder.Runtime + "/bin";
         let GMAssetCompilerPathOrig = GMAssetCompilerDirOrig + "/GMAssetCompiler.exe";
-        let GMAssetCompilerDir2022 = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "win" : "osx"}/x64`;
+        let GMAssetCompilerDir2022 = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "windows" : "osx"}/x64`;
         let GMAssetCompilerPath2022 = `${GMAssetCompilerDir2022}/GMAssetCompiler${isWindows ? ".exe" : ""}`;
         let GMAssetCompilerDir = GMAssetCompilerDirOrig;
         let GMAssetCompilerPath = GMAssetCompilerPathOrig;
