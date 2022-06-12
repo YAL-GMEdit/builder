@@ -8,6 +8,15 @@ class BuilderCompile {
         // Clear any past errors!
         Builder.Errors = [];
         Builder.ErrorMet = false;
+        
+        // Create or reuse output tab!
+        let output = BuilderOutput.open(false);
+        output.clear(`Compile Started: ${Builder.GetTime()}`);
+        let abort = (text) => {
+            output.write(text);
+            return false;
+        }
+        output.clear(`Compile Started: ${Builder.GetTime()}`);
 
         // Save all edits if enabled!
         if (BuilderPreferences.current.saveCompile == true) {
@@ -39,17 +48,23 @@ class BuilderCompile {
                 found = true;
                 break;
             }
-            if (!found) {
-                $gmedit["electron.Dialog"].showError(`Couldn't find runtime ${runtimeSelection} that is set in project properties!`);
-                return;
-            }
+            if (!found) return abort(`Couldn't find runtime ${runtimeSelection} that is set in project properties!`);
         } else {
             runtimeSelection = Builder.RuntimeSettings.selection;
             Builder.Runtime = Builder.RuntimeSettings.location + runtimeSelection;
         }
         //
-        let isBeta = runtimeSelection.startsWith("runtime-23.");
-        let appName = (isBeta ? "GameMakerStudio2-Beta" : "GameMakerStudio2");
+        let appName = (() => {
+            let rt = Builder.Runtime;
+            let at = rt.lastIndexOf("/Cache");
+            if (at < 0) return "GameMakerStudio2";
+            rt = rt.substring(0, at);
+            at = rt.lastIndexOf("/");
+            if (at < 0) return "GameMakerStudio2";
+            return rt.substring(at + 1);
+        })();
+        output.write(`Program: ${appName}`);
+        output.write(`Runtime: ${Builder.Runtime}`)
         let steamworksPath = null;
         let Userpath, Temporary, GMS2CacheDir; {
             let appBase = (isWindows ? Electron_App.getPath("appData") : `/Users/${process.env.LOGNAME}/.config`);
@@ -66,12 +81,11 @@ class BuilderCompile {
                 Userpath = `${appDir}/${username}_${userData.userID}`;
                 GMS2CacheDir = `${appDir}/Cache/GMS2CACHE`;
             } catch (x) {
-                $gmedit["electron.Dialog"].showError([
+                return abort([
                     "Failed to figure out your user path!",
                     "Make sure you're logged in.",
                     "Error: " + x
                 ].join("\n"));
-                return;
             }
             //
             try {
@@ -95,15 +109,11 @@ class BuilderCompile {
             Temporary += `${isWindows ? "" : "/GameMakerStudio2"}/GMS2TEMP`;
             if (!Electron_FS.existsSync(Temporary)) Electron_FS.mkdirSync(Temporary);
         }
+        output.write("Temp directory: " + Temporary);
 
         let Name = project.name.slice(0, project.name.lastIndexOf("."));
         Builder.Name = Builder.Sanitize(Name);
         Builder.Cache = `${GMS2CacheDir}/${Name}`;
-
-        // Create or reuse output tab!
-        let output = BuilderOutput.open(false);
-        output.clear(`Compile Started: ${Builder.GetTime()}\nUsing Runtime: ${runtimeSelection}`);
-        output.write("Using Temporary Directory: " + Temporary);
 
         // Check for GMAssetCompiler and Runner files!
         let GMAssetCompilerDirOrig = Builder.Runtime + "/bin";
