@@ -54,8 +54,8 @@ Builder = {
         let Runtimes = [];
         try {
             Electron_FS.readdirSync(path).forEach((e) => {
-                let RuntimeStat = Electron_FS.statSync(path + e);
-                if (RuntimeStat.isDirectory() == true) {
+                let rtStat = Electron_FS.statSync(path + e);
+                if (rtStat.isDirectory() && Electron_FS.existsSync(path + e + "/fnames")) {
                     Runtimes.push(e);
                 }
             });
