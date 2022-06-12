@@ -1,6 +1,6 @@
 class BuilderCompile {
-	static run(autoRunFork) {
-		// Make sure a GMS2 project is open!
+    static run(autoRunFork) {
+        // Make sure a GMS2 project is open!
         let project = $gmedit["gml.Project"].current;
         if (Builder.ProjectVersion(project) != 2) return;
         const isWindows = (Builder.Platform == "win");
@@ -51,9 +51,9 @@ class BuilderCompile {
         let isBeta = runtimeSelection.startsWith("runtime-23.");
         let appName = (isBeta ? "GameMakerStudio2-Beta" : "GameMakerStudio2");
         let steamworksPath = null;
-        let Userpath, Temporary; {
+        let Userpath, Temporary, GMS2CacheDir; {
             let appBase = (isWindows ? Electron_App.getPath("appData") : `/Users/${process.env.LOGNAME}/.config`);
-            let appDir = `${appBase}/${appName}/`;
+            let appDir = `${appBase}/${appName}`;
             if (!Electron_FS.existsSync(appDir)) Electron_FS.mkdirSync(appDir);
             //
             try {
@@ -64,6 +64,7 @@ class BuilderCompile {
                 if (usernameAtSign >= 0) username = username.slice(0, usernameAtSign);
                 //
                 Userpath = `${appDir}/${username}_${userData.userID}`;
+                GMS2CacheDir = `${appDir}/Cache/GMS2CACHE`;
             } catch (x) {
                 $gmedit["electron.Dialog"].showError([
                     "Failed to figure out your user path!",
@@ -91,32 +92,35 @@ class BuilderCompile {
             }
             // for an off-chance that your %LOCALAPPDATA%/GameMakerStudio2 directory doesn't exist
             if (!Electron_FS.existsSync(Temporary)) Electron_FS.mkdirSync(Temporary);
-            Temporary += "/GMS2TEMP";
+            Temporary += `${isWindows ? "" : "/GameMakerStudio2"}/GMS2TEMP`;
             if (!Electron_FS.existsSync(Temporary)) Electron_FS.mkdirSync(Temporary);
         }
-        
+
         let Name = project.name.slice(0, project.name.lastIndexOf("."));
         Builder.Name = Builder.Sanitize(Name);
-        
+        Builder.Cache = `${GMS2CacheDir}/${Name}`;
+
         // Create or reuse output tab!
-		let output = BuilderOutput.open(false);
-		output.clear(`Compile Started: ${Builder.GetTime()}\nUsing Runtime: ${runtimeSelection}`);
+        let output = BuilderOutput.open(false);
+        output.clear(`Compile Started: ${Builder.GetTime()}\nUsing Runtime: ${runtimeSelection}`);
         output.write("Using Temporary Directory: " + Temporary);
 
         // Check for GMAssetCompiler and Runner files!
         let GMAssetCompilerDirOrig = Builder.Runtime + "/bin";
         let GMAssetCompilerPathOrig = GMAssetCompilerDirOrig + "/GMAssetCompiler.exe";
-        let GMAssetCompilerDir2022 = Builder.Runtime + "/bin/assetcompiler/windows/x64";
-        let GMAssetCompilerPath2022 = GMAssetCompilerDir2022 + "/GMAssetCompiler.exe";
+        let GMAssetCompilerDir2022 = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "windows" : "osx"}/x64`;
+        let GMAssetCompilerPath2022 = `${GMAssetCompilerDir2022}/GMAssetCompiler${isWindows ? ".exe" : ""}`;
         let GMAssetCompilerDir = GMAssetCompilerDirOrig;
         let GMAssetCompilerPath = GMAssetCompilerPathOrig;
-        
+        let DotNET6Flag = false;
+
         if (!Electron_FS.existsSync(GMAssetCompilerPath)) {
             if (Electron_FS.existsSync(GMAssetCompilerPath2022)) {
                 GMAssetCompilerDir = GMAssetCompilerDir2022;
                 GMAssetCompilerPath = GMAssetCompilerPath2022;
+                DotNET6Flag = true;
             } else {
-                output.write(`!!! Could not find "GMAssetCompiler.exe" in ${GMAssetCompilerPath}`);
+                output.write(`!!! Could not find "GMAssetCompiler${isWindows ? ".exe" : ""}" in ${GMAssetCompilerPath}`);
                 Builder.Stop();
                 return;
             }
@@ -146,44 +150,53 @@ class BuilderCompile {
         output.write(""); // GMAC doesn't line-break at the start
 
         // Run the compiler!
-		let compilerArgs = [
-			`/c`,
-			`/zpex`,
-			`/j=4`,
-			`/gn=${Name}`,
-			`/td=${Temporary}`,
-			`/zpuf=${Userpath}`,
-			`/m=${isWindows? "windows" : "mac"}`,
-			`/tgt=64`,
-			`/nodnd`,
-			`/cfg=${$gmedit["gml.Project"].current.config}`,
-			`/o=${Builder.Outpath}`,
-			`/sh=True`,
-			`/cvm`,
-			`/baseproject=${Builder.Runtime}/BaseProject/BaseProject.yyp`,
-			`${$gmedit["gml.Project"].current.path}`,
-			`/v`,
-			`/bt=run`,
-            `/rtp=${Builder.Runtime}`
-		];
+        let compilerArgs = [
+            `/c`,
+            `/mv=1`,
+            `/zpex`,
+            `/iv=0`,
+            `/rv=0`,
+            `/bv=0`,
+            `/j=8`,
+            `/gn=${Name}`,
+            `/td=${Temporary}`,
+            `/cd=${Builder.Cache}`,
+            `/rtp=${Builder.Runtime}`,
+            `/zpuf=${Userpath}`,
+            `/m=${isWindows? "windows" : "mac"}`,
+            `/tgt=2`,
+            `/llvmSource=${Builder.Runtime}/interpreted/`,
+            `/nodnd`,
+            `/cfg=${$gmedit["gml.Project"].current.config}`,
+            `/o=${Builder.Outpath}`,
+            `/sh=True`,
+            `/optionsini=${Builder.Outpath}/options.ini`,
+            `/cvm`,
+            `/baseproject=${Builder.Runtime}/BaseProject/BaseProject.yyp`,
+            `${$gmedit["gml.Project"].current.path}`,
+            `/v`,
+            `/bt=run`,
+            `/rt=vm`
+        ];
         if (isWindows) {
             Builder.Compiler = Builder.Command.spawn(GMAssetCompilerPath, compilerArgs, {
                 cwd: Builder.Runtime,
             });
         } else {
-            Builder.Compiler = Builder.Command.spawn("/Library/Frameworks/Mono.framework/Versions/Current/Commands/mono", [GMAssetCompilerPath].concat(compilerArgs));
+            if (DotNET6Flag) Builder.Compiler = Builder.Command.spawn(GMAssetCompilerPath, compilerArgs);
+            else Builder.Compiler = Builder.Command.spawn("/Library/Frameworks/Mono.framework/Versions/Current/Commands/mono", [GMAssetCompilerPath].concat(compilerArgs));
         }
 
         // Capture compiler output!
         Builder.Compiler.stdout.on("data", (e) => {
-			let text = e.toString();
+            let text = e.toString();
             switch (Builder.Parse(text, 0)) {
                 case 1: Builder.Stop();
                 default: output.write(text, false);
             }
         });
         Builder.Compiler.stderr.on("data", (e) => {
-			let text = e.toString();
+            let text = e.toString();
             switch (Builder.Parse(text, 0)) {
                 case 1: Builder.Stop();
                 default: output.write(text, false);
@@ -192,13 +205,14 @@ class BuilderCompile {
 
         Builder.Compiler.on("close", (exitCode) => {
             if (exitCode != 0 || Builder.Compiler == undefined || Builder.ErrorMet == true) { Builder.Clean(); return; }
-            
+
             // Rename output file!
-            if (Name != Builder.Name) {
-                Electron_FS.renameSync(`${Builder.Outpath}/${Name}.${Builder.Extension}`, `${Builder.Outpath}/${Builder.Name}.${Builder.Extension}`);
-                Electron_FS.renameSync(`${Builder.Outpath}/${Name}.yydebug`, `${Builder.Outpath}/${Builder.Name}.yydebug`);
+            if (Name != Builder.Name || !isWindows) {
+                let executableName = isWindows ? Name : "game";
+                Electron_FS.renameSync(`${Builder.Outpath}/${executableName}.${Builder.Extension}`, `${Builder.Outpath}/${Builder.Name}.${Builder.Extension}`);
+                Electron_FS.renameSync(`${Builder.Outpath}/${executableName}.yydebug`, `${Builder.Outpath}/${Builder.Name}.yydebug`);
             }
-            
+
             // Copy Steam API binary if needed:
             if (Electron_FS.existsSync(`${Builder.Outpath}/steam_appid.txt`) && steamworksPath) try {
                 if (isWindows) {
@@ -210,12 +224,12 @@ class BuilderCompile {
             } catch (x) {
                 console.error("Failed to copy steam_api:", x);
             }
-            
+
             BuilderOutputAside.clearOnNextOpen = true;
             Builder.Runner.push(Builder.Spawn(Builder.Runtime, Builder.Outpath, Builder.Name));
             Builder.MenuItems.fork.enabled = true;
             if (autoRunFork) Builder.Fork();
             Builder.Compiler = undefined;
         });
-	}
+    }
 }

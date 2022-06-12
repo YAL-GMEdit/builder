@@ -7,6 +7,7 @@ Builder = Object.assign(Builder, {
     Errors: [],
     Outpath: "",
     Runtime: "",
+    Cache: "",
     Drive: "",
     Drives: [],
     Run: function(fork) {
@@ -43,6 +44,10 @@ Builder = Object.assign(Builder, {
         BuilderDrives.removeCurrent();
         BuilderOutput.main.write(`Compile Ended: ${Builder.GetTime()}`);
         Builder.Runner = [];
+        if (Builder.Cache) Electron_FS.rmdir(Builder.Cache, { recursive: true }, (err) => {
+            if (err) throw err;
+            console.log("Cache cleaned up in", Builder.Cache);
+        });
     },
     Parse: function(string, type) {
         // Parse error output!
