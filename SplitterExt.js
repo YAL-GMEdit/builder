@@ -1,6 +1,3 @@
-/**
- * Modified version of base GMEdit's splitter. Allows both vertical and horizontal splits.
- */
 class SplitterExt {
 
     static target = null;

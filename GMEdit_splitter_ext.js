@@ -35,7 +35,6 @@ class GMEdit_Splitter_ext {
         window.GMEdit_Splitter_Etx = SplitterExt;
         var splitterEls = document.querySelectorAll(".splitter-td-ext");
         for (var i = 0; i < splitterEls.length; i++) {
-            console.log(splitterEls[i]);
             var sp = new SplitterExt(this, splitterEls[i])
             if (sp.setVars) this.splitters.push(sp);
         }

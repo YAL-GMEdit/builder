@@ -5,7 +5,7 @@ Builder = {
     MenuItems: { list: [], run: null, stop: null, fork: null },
     Platform: require("os").type(),
     RuntimeSettings: null,
-    LoadKeywords: function(path) {
+    LoadKeywords: function (path) {
         const custBase = $gmedit["electron.FileWrap"].userPath + "/api/" + GmlAPI.version.getName();
         const GmlAPILoader = $gmedit["gml.GmlAPILoader"];
         const GmlParseAPI = $gmedit["parsers.GmlParseAPI"];
@@ -39,9 +39,9 @@ Builder = {
             GmlParseAPI.loadStd(apiText, args);
         }
     },
-    ProjectVersion: function(project) {
+    ProjectVersion: function (project) {
         // GMEdit seems to adjust the .version property to be a gml_GmlVersion class, check if it's an object or not to maintain backwards compatibility
-        if (typeof(project.version) == "object") {
+        if (typeof (project.version) == "object") {
             switch (project.version.config.projectMode) {
                 case "gms2": return 2;
                 case "gms1": return 1;
@@ -50,7 +50,7 @@ Builder = {
         }
         return project.version;
     },
-    GetRuntimes: function(path) {
+    GetRuntimes: function (path) {
         let Runtimes = [];
         try {
             Electron_FS.readdirSync(path).forEach((e) => {
@@ -65,10 +65,10 @@ Builder = {
         Runtimes.sort((a, b) => a < b ? 1 : -1);
         return Runtimes;
     },
-    InitalizeRuntimes: function(set, showWarning) {
+    InitalizeRuntimes: function (set, showWarning) {
         // [Re-]gather list of runtimes
         set.runtimeList = this.GetRuntimes(set.location);
-        
+
         if (set.runtimeList.length <= 0) {
             if (showWarning) Electron_Dialog.showMessageBox({
                 type: "warning",
@@ -77,32 +77,32 @@ Builder = {
             set.selection = "";
             return;
         }
-        
+
         if (set.selection.trim() == "" || !set.runtimeList.includes(set.selection)) {
             set.selection = set.runtimeList[0];
         }
     },
-    Initalize: function() {
+    Initalize: function () {
         // Check if platform is supported
         this.Platform = (this.Platform.includes("Windows") ? "win" : (this.Platform.includes("Darwin") ? "mac" : "unknown"));
         if (this.Platform == "unknown") {
             Electron_Dialog.showErrorBox("builder error", `builder v${Builder.Version} is not supported on your platform (${require("os").type()})`);
             return false;
         }
-        
+
         // Load preferences file
         BuilderPreferences.init();
         for (let [key, val] of Object.entries(BuilderPreferences.current.runtimeSettings)) {
             this.InitalizeRuntimes(val, key == "Stable");
         }
-        
+
         let runtimeSettings = BuilderPreferences.current.runtimeSettings.Stable;
         Builder.LoadKeywords(runtimeSettings.location + runtimeSettings.selection);
         return true;
     }
 };
 
-(function() {
+(function () {
     function initCommands() {
         const commands = [{
             name: "builder-run",
@@ -124,8 +124,13 @@ Builder = {
             title: "builder: Fork instance of runner",
             bindKey: "F7",
             exec: Builder.Fork,
+        }, {
+            name: "builder-toggle-terminal",
+            title: "builder: Toggle terminal output",
+            bindKey: "Ctrl-`",
+            exec: BuilderOutputTerminal.toggleTerminal
         }];
-        
+
         let hashHandler = $gmedit["ui.KeyboardShortcuts"].hashHandler;
         let AceCommands = $gmedit["ace.AceCommands"];
         for (let cmd of commands) {
@@ -138,7 +143,7 @@ Builder = {
         }
     }
     GMEdit.register("builder", {
-        init: function(config) {
+        init: function (config) {
             // Initalize Builder!
             if (Builder.Initalize() == false) {
                 console.error("builder - Failed to initalize.");
@@ -158,24 +163,24 @@ Builder = {
                         id: "builder-run",
                         label: "Run",
                         accelerator: "F5",
-						icon: config.dir + "/icons/run.png",
+                        icon: config.dir + "/icons/run.png",
                         enabled: false,
                         click: () => Builder.Run()
                     }),
                     Builder.MenuItems.runAndFork = new Electron_MenuItem({
-                       id: "builder-run-and-fork",
-                       label: "Run and Fork",
-                       accelerator: "Ctrl+F5",
-					   icon: config.dir + "/icons/run-and-fork.png",
-                       enabled: false,
-                       visible: BuilderPreferences.current.showRunAndFork,
-                       click: () => Builder.Run(true)
+                        id: "builder-run-and-fork",
+                        label: "Run and Fork",
+                        accelerator: "Ctrl+F5",
+                        icon: config.dir + "/icons/run-and-fork.png",
+                        enabled: false,
+                        visible: BuilderPreferences.current.showRunAndFork,
+                        click: () => Builder.Run(true)
                     }),
                     Builder.MenuItems.stop = new Electron_MenuItem({
                         id: "builder-stop",
                         label: "Stop",
                         accelerator: "F6",
-						icon: config.dir + "/icons/stop.png",
+                        icon: config.dir + "/icons/stop.png",
                         enabled: false,
                         click: Builder.Stop
                     }),
@@ -183,7 +188,7 @@ Builder = {
                         id: "builder-fork",
                         label: "Fork",
                         accelerator: "F7",
-						icon: config.dir + "/icons/fork.png",
+                        icon: config.dir + "/icons/fork.png",
                         enabled: false,
                         click: Builder.Fork
                     })
@@ -197,10 +202,10 @@ Builder = {
 
             BuilderPreferences.ready();
             BuilderProjectProperties.ready();
-            
+
             // Add ace commands!
             initCommands();
-            
+
             // Hook into finishedIndexing
             let Project = $gmedit["gml.Project"], finishedIndexing = Project.prototype.finishedIndexing;
             function onFinishedIndexing() {
@@ -221,7 +226,7 @@ Builder = {
                         }
                     }
                 }
-                
+
                 let sf = Builder.SessionsFile;
                 if (sf.sync()) sf.data = {};
                 let path = project.path;
@@ -229,7 +234,7 @@ Builder = {
                 if (pc) pc.mtime = Date.now();
                 this.config = (pc && pc.config) || "default";
                 sf.flush();
-                
+
                 let TreeView = $gmedit["ui.treeview.TreeView"];
                 let Configurations = undefined;
                 for (let dir of document.querySelectorAll(".dir")) {
@@ -239,17 +244,17 @@ Builder = {
                     }
                 }
                 Configurations = Configurations || TreeView.makeAssetDir("Configs", "");
-                
+
                 this.configs.forEach((configName) => {
                     let Configuration = TreeView.makeItem(configName);
-                    Configuration.addEventListener("dblclick", function() {
+                    Configuration.addEventListener("dblclick", function () {
                         Project.current.config = configName;
                         //
                         let sf = Builder.SessionsFile;
                         if (sf.sync()) sf.data = {};
                         let path = Project.current.path;
                         let pc = sf.data[path];
-                        if (pc == null) pc = sf.data[path] = { };
+                        if (pc == null) pc = sf.data[path] = {};
                         pc.config = configName;
                         pc.mtime = Date.now();
                         sf.flush();
@@ -259,10 +264,10 @@ Builder = {
                     Configurations.treeItems.appendChild(Configuration);
                 });
                 TreeView.element.appendChild(Configurations);
-                
+
                 document.getElementById("project-name").innerText = `${Project.current.displayName} (${this.config})`;
             }
-            Project.prototype.finishedIndexing = function(arguments) {
+            Project.prototype.finishedIndexing = function (arguments) {
                 let result = finishedIndexing.apply(this, arguments);
                 try {
                     onFinishedIndexing.call(this);
@@ -271,7 +276,7 @@ Builder = {
                 }
                 return result;
             }
-            
+
             function projectOpened() {
                 for (let item of Builder.MenuItems.list) item.enabled = false;
                 let project = $gmedit["gml.Project"].current;
@@ -292,11 +297,11 @@ Builder = {
                 }
             }
             GMEdit.on("projectOpen", projectOpened);
-        
-            GMEdit.on("projectClose", function() {
+
+            GMEdit.on("projectClose", function () {
                 for (let item of Builder.MenuItems.list) item.enabled = false;
             });
-            
+
             projectOpened();
         }
     });

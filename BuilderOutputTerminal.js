@@ -20,7 +20,7 @@ class BuilderOutputTerminal {
 	/** @type {BuilderOutput} */
 	static output = null;
 
-	static editorID = "builder_fork";
+	static editorID = "builder_terminal";
 
 	static clearOnNextOpen = false;
 
@@ -56,21 +56,6 @@ class BuilderOutputTerminal {
 
 		this.container.id = this.editorID;
 		this.splitter = new GMEdit_Splitter_ext(this.sizer, GMEditSplitterDirection.Height);
-
-		this.aceEditor.commands.addCommand({
-			name: "builder-toggle-terminal",
-			bindKey: "Ctrl-`",
-			exec: (e) => {
-				for (let tab of $gmedit["ui.ChromeTabs"].element.querySelectorAll(".chrome-tab")) {
-					if (tab.gmlFile != e.session.gmlFile) continue;
-					BuilderOutputTerminal.hide();
-					/*if (!tab.classList.contains("chrome-tab-current")) {
-						tab.querySelector(".chrome-tab-close").click();
-					}*/
-					break;
-				}
-			}
-		});
 	}
 
 	static emitResize() {
@@ -82,6 +67,25 @@ class BuilderOutputTerminal {
 	static onFileClose(e) {
 		if (e.file == BuilderOutputTerminal.output?.gmlFile) {
 			BuilderOutputTerminal.hide();
+		}
+	}
+
+	static toggleTerminal() {
+		var parent = document.querySelector("#builder_terminal");
+		var sizer = document.querySelector(".splitter-td-ext");
+		if (parent) {
+			if (parent.style.display == "none") {
+				parent.style.display = "";
+				sizer.style.display = "";
+			} else {
+				parent.style.display = "none";
+				sizer.style.display = "none";
+			}
+			var e = new CustomEvent("resize");
+			e.initEvent("resize");
+			window.dispatchEvent(e);
+		} else {
+			console.error("Could not find terminal resource");
 		}
 	}
 
