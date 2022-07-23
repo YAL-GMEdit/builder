@@ -234,12 +234,13 @@ class BuilderCompile {
             } catch (x) {
                 console.error("Failed to copy steam_api:", x);
             }
-
+            
             BuilderOutputAside.clearOnNextOpen = true;
+            BuilderOutputTerminal.clearOnNextOpen = true;
             Builder.Runner.push(Builder.Spawn(Builder.Runtime, Builder.Outpath, Builder.Name));
             Builder.MenuItems.fork.enabled = true;
             if (autoRunFork) Builder.Fork();
             Builder.Compiler = undefined;
         });
-    }
+	}
 }

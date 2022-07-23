@@ -1,0 +1,7 @@
+#splitter-td-ext, .splitter-td-ext {
+	border-right: 1px solid;
+	border-left: 1px solid;
+	width: 100%;
+	flex: 0 0 5px;
+	cursor: s-resize;
+}

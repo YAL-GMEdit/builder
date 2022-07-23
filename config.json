@@ -1,5 +1,8 @@
 {
     "name": "builder",
+    "stylesheets": [
+        "terminal.css"
+    ],
     "scripts": [
         "main.js",
         "build.js",
@@ -8,6 +11,10 @@
         "BuilderCompile.js",
         "BuilderDrives.js",
         "BuilderOutput.js",
-        "BuilderOutputAside.js"
+        "BuilderOutputAside.js",
+        "BuilderOutputTerminal.js",
+        "GMEDitSplitterDirection.js",
+        "GMEdit_splitter_ext.js",
+        "SplitterExt.js"
     ]
 }
