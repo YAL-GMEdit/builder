@@ -136,7 +136,7 @@ class BuilderCompile {
             }
         }
         if (Electron_FS.existsSync(`${Builder.Runtime}/${isWindows ? "windows/Runner.exe" : "mac/YoYo Runner.app"}`) == false) {
-            output.write(`!!! Could not find ${isWindows ? "Runner.exe" : "YoYo Runner.app"} in ${Runtime}/${isWindows ? "windows/" : "mac/"}`);
+            output.write(`!!! Could not find ${isWindows ? "Runner.exe" : "YoYo Runner.app"} in ${Builder.Runtime}/${isWindows ? "windows/" : "mac/"}`);
             Builder.Stop();
             return;
         }
@@ -158,35 +158,46 @@ class BuilderCompile {
         Builder.Outpath = Temporary + Name + "_" + Builder.Random();
         output.write("Using output path: " + Builder.Outpath);
         output.write(""); // GMAC doesn't line-break at the start
+        /*
+        Target bit flags:
+        Windows: 1 << 6
+        Mac: 1 << 1
+        IOS: 1 << 2
+        Android: 1 << 3
+        HTML5: 1 << 5
+        Linux: 1 << 7
+        WASM: 1 << 63
+        OperaGX: 1 << 34
+        */
 
         // Run the compiler!
         let compilerArgs = [
-            `/c`,
-            `/mv=1`,
-            `/zpex`,
-            `/iv=0`,
-            `/rv=0`,
-            `/bv=0`,
-            `/j=8`,
-            `/gn=${Name}`,
-            `/td=${Temporary}`,
-            `/cd=${Builder.Cache}`,
-            `/rtp=${Builder.Runtime}`,
-            `/zpuf=${Userpath}`,
-            `/m=${isWindows? "windows" : "mac"}`,
-            `/tgt=2`,
+            `/compile`,
+            `/majorv=1`,
+            `/minorv=0`,
+            `/releasev=0`,
+            `/buildv=0`,
+            `/zpex`, // GMS2 mode
+            `/NumProcessors=8`,
+            `/gamename=${Name}`, // spaces/etc. will be replaced automatically
+            `/TempDir=${Temporary}`,
+            `/CacheDir=${Builder.Cache}`,
+            `/runtimePath=${Builder.Runtime}`,
+            `/zpuf=${Userpath}`, // GMS2 user folder
+            `/machine=${isWindows? "windows" : "mac"}`,
+            `/target=${isWindows ? 64 : 2}`,
             `/llvmSource=${Builder.Runtime}/interpreted/`,
             `/nodnd`,
-            `/cfg=${$gmedit["gml.Project"].current.config}`,
-            `/o=${Builder.Outpath}`,
-            `/sh=True`,
+            `/config=${$gmedit["gml.Project"].current.config}`,
+            `/outputDir=${Builder.Outpath}`,
+            `/ShortCircuit=True`,
             `/optionsini=${Builder.Outpath}/options.ini`,
-            `/cvm`,
+            `/CompileToVM`,
             `/baseproject=${Builder.Runtime}/BaseProject/BaseProject.yyp`,
-            `${$gmedit["gml.Project"].current.path}`,
-            `/v`,
-            `/bt=run`,
-            `/rt=vm`
+            `/verbose`,
+            `/bt=run`, // build type
+            `/runtime=vm`, // "vm" or "yyc"
+            $gmedit["gml.Project"].current.path,
         ];
         if (isWindows) {
             Builder.Compiler = Builder.Command.spawn(GMAssetCompilerPath, compilerArgs, {
