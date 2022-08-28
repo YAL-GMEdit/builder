@@ -155,9 +155,10 @@ Builder = Object.assign(Builder, {
         }
         GmlFile.openTab(output);
     },
-    Spawn: function(runtime, outputPath, name, isFork) {
+    Spawn: function(runtime, outputPath, name, isFork, callback) {
         // Spawn an instance of the runner!
-        let runnerPath = (Builder.Platform == "win"
+        let runnerPath = Builder.RunnerPath;
+        runnerPath ??= (Builder.Platform == "win"
             ? `${runtime}/windows/Runner.exe`
             : `${runtime}/mac/YoYo Runner.app/Contents/MacOS/Mac_Runner`
         );
@@ -193,6 +194,7 @@ Builder = Object.assign(Builder, {
             if (i >= 0) runners.splice(i, 1);
             
             if (code != 0 && code != null) output.write(`Runner exited with non-zero status (0x${code.toString(16)} = ${code})`)
+            if (callback) callback(code);
             if (runners.length == 0) Builder.Clean();
         });
         return runner;
