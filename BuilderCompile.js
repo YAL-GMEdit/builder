@@ -221,6 +221,7 @@ class BuilderCompile {
             `/verbose`,
             `/bt=run`, // build type
             `/runtime=vm`, // "vm" or "yyc"
+            `/debug`,
         ];
         if (x64flag != null) compilerArgs.push("/64bitgame=" + x64flag);
         compilerArgs.push(project.path);
