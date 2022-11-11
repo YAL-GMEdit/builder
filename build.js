@@ -36,18 +36,57 @@ Builder = Object.assign(Builder, {
         // Fork runner and add it to process list!
         Builder.Runner.push(Builder.Spawn(Builder.Runtime, Builder.Outpath, Builder.Name, true));
     },
-    Clean: function() {
-        // Clean up anything from compile job!
+    CleanRuntime: function() {
+        // you can run the game again
         for (let item of Builder.MenuItems.list) {
-            item.enabled = item.id.includes("-run");
+            item.enabled = item.id.includes("-run") || item.id.includes("-clean");
         }
         BuilderDrives.removeCurrent();
-        BuilderOutput.main.write(`Compile Ended: ${Builder.GetTime()}`);
         Builder.Runner = [];
-        if (Builder.Cache) Electron_FS.rmdir(Builder.Cache, { recursive: true }, (err) => {
-            if (err) throw err;
-            console.log("Cache cleaned up in", Builder.Cache);
+    },
+    CleanCache: function(_then) {
+        const cacheDir = Builder.Cache;
+        if (!cacheDir) return 1;
+        if (!Electron_FS.existsSync(cacheDir)) return 2;
+        Electron_FS.rmdir(cacheDir, { recursive: true }, (err) => {
+            if (err) {
+                console.error(`Couldn't clean cache directory ${cacheDir}: `, err);
+            } else {
+                console.log(`Cleaned up cache directory ${cacheDir}`);
+            }
+            if (_then) _then(err);
         });
+        return 0;
+    },
+    CleanGUI: function() {
+        console.log("clean?")
+        let result = Builder.CleanCache((err) => {
+            if (err) {
+                Electron_Dialog.showErrorBox({
+                    type: "error",
+                title: "Builder",
+                    message: "Couldn't clean cache in\n" + Builder.Cache + "\n" + err
+                });
+            } else {
+                Electron_Dialog.showMessageBox({
+                    type: "info",
+                    title: "Builder",
+                    message: "Successfully cleaned cache in\n" + Builder.Cache
+                });
+            }
+        });
+        switch (result) {
+            case 1: Electron_Dialog.showMessageBox({
+                type: "error",
+                title: "Builder",
+                message: "No idea where the cache is - run the game first"
+            }); break;
+            case 2: Electron_Dialog.showMessageBox({
+                type: "info",
+                title: "Builder",
+                message: "Builder-specific cache directory doesn't exist - no action needed"
+            }); break;
+        }
     },
     Parse: function(string, type) {
         // Parse error output!
@@ -195,7 +234,8 @@ Builder = Object.assign(Builder, {
             
             if (code != 0 && code != null) output.write(`Runner exited with non-zero status (0x${code.toString(16)} = ${code})`)
             if (callback) callback(code);
-            if (runners.length == 0) Builder.Clean();
+            Builder.CleanRuntime();
+            if (runners.length == 0 && BuilderPreferences.current.cleanAfterRun) Builder.CleanCache();
         });
         return runner;
     },

@@ -1,7 +1,7 @@
 if (require("os").type().includes("Darwin")) process.env.ProgramData = "/Users/Shared";
 
 Builder = {
-    Version: "1.24",
+    Version: "1.25",
     MenuItems: { list: [], run: null, stop: null, fork: null },
     Platform: require("os").type(),
     RuntimeSettings: null,
@@ -86,7 +86,11 @@ Builder = {
         // Check if platform is supported
         this.Platform = (this.Platform.includes("Windows") ? "win" : (this.Platform.includes("Darwin") ? "mac" : "unknown"));
         if (this.Platform == "unknown") {
-            Electron_Dialog.showErrorBox("builder error", `builder v${Builder.Version} is not supported on your platform (${require("os").type()})`);
+            Electron_Dialog.showMessageBox({
+                type: "error",
+                title: "Builder",
+                message: `builder v${Builder.Version} is not supported on your platform (${require("os").type()})`
+            });
             return false;
         }
         
@@ -186,7 +190,15 @@ Builder = {
 						icon: config.dir + "/icons/fork.png",
                         enabled: false,
                         click: Builder.Fork
-                    })
+                    }),
+                    Builder.MenuItems.clean = new Electron_MenuItem({
+                        id: "builder-clean",
+                        label: "Clean",
+                        accelerator: "Ctrl+F7",
+						icon: config.dir + "/icons/clean.png",
+                        enabled: false,
+                        click: Builder.CleanGUI
+                    }),
                 ];
                 for (let newItem of Builder.MenuItems.list) {
                     MainMenu.insert(++index, newItem);
@@ -278,6 +290,7 @@ Builder = {
                 if (Builder.ProjectVersion(project) == 2) {
                     Builder.MenuItems.run.enabled = true;
                     Builder.MenuItems.runAndFork.enabled = true;
+                    Builder.MenuItems.clean.enabled = true;
                     let runtime;
                     const pref = BuilderPreferences.current;
                     if (project.version.name == "v23"

@@ -11,7 +11,6 @@ class BuilderCompile {
         
         // Create or reuse output tab!
         let output = BuilderOutput.open(false);
-        output.clear(`Compile Started: ${Builder.GetTime()}`);
         let abort = (text) => {
             output.write(text);
             return false;
@@ -90,7 +89,10 @@ class BuilderCompile {
             //
             try {
                 let userSettings = JSON.parse(Electron_FS.readFileSync(`${Userpath}/local_settings.json`));
+                let dir;
                 Temporary = userSettings["machine.General Settings.Paths.IDE.TempFolder"];
+                dir = userSettings["machine.General Settings.Paths.IDE.AssetCacheFolder"];
+                if (dir) GMS2CacheDir = dir + "\\GMS2CACHE";
                 steamworksPath = userSettings["machine.Platform Settings.Steam.steamsdk_path"];
             } catch (x) {
                 console.error("Failed to read temporary folder path, assuming default.", x);
@@ -180,6 +182,7 @@ class BuilderCompile {
         Builder.Outpath = Temporary + Name + "_" + Builder.Random();
         output.write("Using output path: " + Builder.Outpath);
         output.write(""); // GMAC doesn't line-break at the start
+        
         /*
         Target bit flags:
         Windows: 1 << 6
@@ -194,37 +197,59 @@ class BuilderCompile {
         const targetMask = isWindows ? 64 : 2;
         const targetMachine = isWindows ? "windows" : "mac";
         const targetMachineFriendly = isWindows ? "Windows" : "macOS";
+        
+        // I don't know where I'm supposed to get feature flag list from
+        let ffe = (function() {
+            let plain = "operagx-yyc,intellisense,nullish,login_sso,test";
+            let shifted = "";
+            for (let i = 0; i < plain.length; i++) {
+                shifted += String.fromCharCode(plain.charCodeAt(i) + 10);
+            }
+            return btoa(shifted);
+        })();
+        
+        // Apparently using forward slashes in paths breaks caching now, go figure
+        const fixSlashes = (path) => {
+            return isWindows ? path.split("/").join("\\") : path;
+        }
+        
         let outputPath = `${Builder.Outpath}/${Builder.Name}.${Builder.Extension}`;
+        
         const compilerArgs = [
             `/compile`,
-            `/majorv=1`,
-            `/minorv=0`,
-            `/releasev=0`,
-            `/buildv=0`,
+            `/majorv=1`, // /mv
+            `/minorv=0`, // /iv
+            `/releasev=0`, // /rv
+            `/buildv=0`, // /bv
             `/zpex`, // GMS2 mode
-            `/NumProcessors=8`,
-            `/gamename=${Name}`, // spaces/etc. will be replaced automatically
-            `/TempDir=${Temporary}`,
-            `/CacheDir=${Builder.Cache}`,
-            `/runtimePath=${Builder.Runtime}`,
-            `/zpuf=${Userpath}`, // GMS2 user folder
-            `/machine=${targetMachine}`,
-            `/target=${targetMask}`,
-            `/llvmSource=${Builder.Runtime}/interpreted/`,
+            `/NumProcessors=8`, // /j
+            `/gamename=${Name}`, // /gn spaces/etc. will be replaced automatically
+            `/TempDir=${fixSlashes(Temporary)}`, // /td
+            `/CacheDir=${fixSlashes(Builder.Cache)}`, // /cd
+            `/runtimePath=${fixSlashes(Builder.Runtime)}`, // /rtp
+            `/zpuf=${fixSlashes(Userpath)}`, // GMS2 user folder
+            `/machine=${targetMachine}`, // /m
+            `/target=${targetMask}`, // /tgt
+            `/llvmSource=${fixSlashes(Builder.Runtime + "/interpreted/")}`,
             `/nodnd`,
             `/config=${project.config}`,
-            `/outputDir=${Builder.Outpath}`,
+            `/outputDir=${fixSlashes(Builder.Outpath)}`,
             `/ShortCircuit=True`,
-            `/optionsini=${Builder.Outpath}/options.ini`,
+            `/optionsini=${fixSlashes(Builder.Outpath + "/options.ini")}`,
             `/CompileToVM`,
-            `/baseproject=${Builder.Runtime}/BaseProject/BaseProject.yyp`,
+            `/baseproject=${fixSlashes(Builder.Runtime + "/BaseProject/BaseProject.yyp")}`,
             `/verbose`,
             `/bt=run`, // build type
             `/runtime=vm`, // "vm" or "yyc"
-            `/debug`,
         ];
+        if (!/^runtime-[27]\./.test(runtimeSelection)) {
+            // not 2.x/7.x - in other words, 2022+
+            compilerArgs.push(`/debug`);
+            compilerArgs.push(`/ffe=${ffe}`);
+        }
         if (x64flag != null) compilerArgs.push("/64bitgame=" + x64flag);
         compilerArgs.push(project.path);
+        //for (let arg of compilerArgs) output.write(arg);
         //
         let extensionNames = []; // only for 2.3+!
         try {
@@ -317,7 +342,7 @@ class BuilderCompile {
             env["YYtempFolderUnmapped"] = TemporaryUnmapped;
             env["YYverbose"] = "True";
             //
-            console.log(env);
+            //console.log(env);
             Object.assign(env, process.env);
             runUserCommandStep_env = env;
         }
@@ -325,7 +350,7 @@ class BuilderCompile {
         const runUserCommandStep_1 = async (path) => {
             if (!project.isGMS23) return false;
             path = project.fullPath(path);
-            console.log(path, Electron_FS.existsSync(path));
+            //console.log(path, Electron_FS.existsSync(path));
             if (!Electron_FS.existsSync(path)) return false;
             // Well? I don't want to print streams when we're done, I want it as it happens
             if (runUserCommandStep_env == null) runUserCommandStep_init_env();
@@ -379,6 +404,7 @@ class BuilderCompile {
         }
 
         // Run the compiler!
+        let compileStartTime = Date.now();
         if (await runUserCommandStep("pre_build_step")) return;
         if (isWindows) {
             Builder.Compiler = Builder.Command.spawn(GMAssetCompilerPath, compilerArgs, {
@@ -411,10 +437,13 @@ class BuilderCompile {
         });
 
         Builder.Compiler.on("close", async (exitCode) => {
-            if (exitCode != 0 || Builder.Compiler == undefined || Builder.ErrorMet == true) {
-                Builder.Clean();
+            if (exitCode != 0 || Builder.Compiler == undefined || Builder.ErrorMet) {
+                BuilderOutput.main.write(`Compile Ended: ${Builder.GetTime()} (${(Date.now() - compileStartTime)/1000}s)`);
+                Builder.CleanRuntime();
+                if (BuilderPreferences.current.cleanOnError) Builder.CleanCache();
                 return;
             }
+            BuilderOutput.main.write(`Compile Finished: ${Builder.GetTime()} (${(Date.now() - compileStartTime)/1000}s)`);
 
             // Rename output file!
             if (Name != Builder.Name || !isWindows) {

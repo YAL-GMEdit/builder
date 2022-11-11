@@ -10,6 +10,8 @@ class BuilderPreferences {
 		forkInSideView: false,
 		showRunAndFork: false,
 		useVirtualDrives: false,
+		cleanOnError: false,
+		cleanAfterRun: false,
 		runtimeSettings: {
 			Stable: {
 				location: process.env.ProgramData + "/GameMakerStudio2/Cache/runtimes/",
@@ -108,11 +110,11 @@ class BuilderPreferences {
 		
 		let settingsGroup = Preferences.addGroup(root, "Builder Settings");
 		if (Builder.Platform == "win") {
-			Preferences.addCheckbox(settingsGroup, 'Use Virtual Drives', this.current.useVirtualDrives, (value) => {
+			Preferences.addCheckbox(settingsGroup, 'Use virtual drives', this.current.useVirtualDrives, (value) => {
 				this.current.useVirtualDrives = value;
 				this.save();
 			});
-			Preferences.addButton(settingsGroup, "Clean Virtual Drives", () => {
+			Preferences.addButton(settingsGroup, "Clean virtual drives", () => {
 				BuilderDrives.clean();
 			});
 			addSep(settingsGroup);
@@ -132,20 +134,28 @@ class BuilderPreferences {
 		});
 		addSep(settingsGroup);
 		
-		Preferences.addCheckbox(settingsGroup, "Reuse Output Tab", this.current.reuseTab, (value) => {
+		Preferences.addCheckbox(settingsGroup, "Reuse output tab", this.current.reuseTab, (value) => {
 			this.current.reuseTab = value;
 			this.save();
 		});
-		Preferences.addCheckbox(settingsGroup, "Save Upon Compile", this.current.saveCompile, (value) => {
+		Preferences.addCheckbox(settingsGroup, "Save all tabs upon compile", this.current.saveCompile, (value) => {
 			this.current.saveCompile = value;
 			this.save();
 		});
-		Preferences.addCheckbox(settingsGroup, "Stop Upon Compile", this.current.stopCompile, (value) => {
+		Preferences.addCheckbox(settingsGroup, "Stop running instances upon compile", this.current.stopCompile, (value) => {
 			this.current.stopCompile = value;
 			this.save();
 		});
-		Preferences.addCheckbox(settingsGroup, "Display Line After Fatal Error", this.current.displayLine, (value) => {
+		Preferences.addCheckbox(settingsGroup, "Open source file after fatal errors", this.current.displayLine, (value) => {
 			this.current.displayLine = value;
+			this.save();
+		});
+		Preferences.addCheckbox(settingsGroup, "Clean cache on compile error", this.current.cleanOnError, (value) => {
+			this.current.cleanOnError = value;
+			this.save();
+		});
+		Preferences.addCheckbox(settingsGroup, "Clean cache after run", this.current.cleanAfterRun, (value) => {
+			this.current.cleanAfterRun = value;
 			this.save();
 		});
 		Preferences.addText(root, `builder v${Builder.Version} by nommiin`);
