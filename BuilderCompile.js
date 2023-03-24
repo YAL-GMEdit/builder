@@ -336,7 +336,9 @@ class BuilderCompile {
             env["YYprojectPath"] = project.path;
             env["YYprojectDir"] = project.dir;
             env["YYruntimeLocation"] = Builder.Runtime;
-            env["YYruntimeVersion"] = runtimeSelection;
+            let version = runtimeSelection;
+            if (version.startsWith("runtime-")) version = version.substring("runtime-".length);
+            env["YYruntimeVersion"] = version;
             env["YYuserDir"] = Userpath;
             env["YYtempFolder"] = TemporaryUnmapped;
             env["YYtempFolderUnmapped"] = TemporaryUnmapped;
