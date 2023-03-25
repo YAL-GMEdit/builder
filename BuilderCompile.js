@@ -214,6 +214,7 @@ class BuilderCompile {
         }
         
         let outputPath = `${Builder.Outpath}/${Builder.Name}.${Builder.Extension}`;
+        let optionsIniPath = fixSlashes(Builder.Outpath + "/options.ini");
         
         const compilerArgs = [
             `/compile`,
@@ -235,7 +236,7 @@ class BuilderCompile {
             `/config=${project.config}`,
             `/outputDir=${fixSlashes(Builder.Outpath)}`,
             `/ShortCircuit=True`,
-            `/optionsini=${fixSlashes(Builder.Outpath + "/options.ini")}`,
+            `/optionsini=${optionsIniPath}`,
             `/CompileToVM`,
             `/baseproject=${fixSlashes(Builder.Runtime + "/BaseProject/BaseProject.yyp")}`,
             `/verbose`,
@@ -269,9 +270,20 @@ class BuilderCompile {
         }
         
         //
-        let runUserCommandStep_env = null
+        let runUserCommandStep_env = null;
         const runUserCommandStep_init_env = () => {
             let env = {};
+            let iniSections = [];
+            let iniAdd = (sectionName, key, value) => {
+                let section = iniSections.filter(q => q.name == sectionName)[0];
+                if (section == null) iniSections.push(section = { name: sectionName, pairs: []});
+                let pairs = section.pairs;
+                let pair = pairs.filter(q => q.key == key)[0];
+                if (pair == null) {
+                    pairs.push({key, value});
+                } else pair.value = value;
+            }
+            if (isWindows && x64flag != null) iniAdd("Windows", "Usex64", x64flag ? "True" : "False");
             // collecting extension options is a little messy but what can you do
             for (let resName of extensionNames) {
                 let res = project.yyResources[resName];
@@ -285,6 +297,24 @@ class BuilderCompile {
                     let ext = project.readYyFileSync(extRel);
                     let optRoot = project.readYyFileSync(optRel);
                     let configurables = optRoot.configurables;
+                    // collect files with PreGraphicsInitialisation...
+                    for (let file of ext.files) {
+                        let func = file.functions.filter(q => q.name == "PreGraphicsInitialisation")[0];
+                        if (func == null) continue;
+                        let aliases = [file.filename];
+                        for (let proxy of file.ProxyFiles) aliases.push(proxy.name);
+                        let PathTools = $gmedit["haxe.io.Path"];
+                        if (isWindows) {
+                            aliases = aliases.filter(name => {
+                                return PathTools.extension(name).toLowerCase() == "dll";
+                            });
+                        } else {
+                            aliases = aliases.filter(name => {
+                                return PathTools.extension(name).toLowerCase() != "dll";
+                            });
+                        }
+                        if (aliases.length > 0) iniAdd(extName, "PreGraphicsInitFile", aliases.join("|"));
+                    }
                     for (let optDef of ext.options) {
                         if (optDef.optType == 5) continue; // label!
                         let optGUID = optDef.guid;
@@ -296,6 +326,7 @@ class BuilderCompile {
                         optVal ??= optDef.defaultValue;
                         if (optVal == null) continue;
                         env[`YYEXTOPT_${extName}_${optDef.name}`] = optVal;
+                        if (optDef.exportToINI) iniAdd(extName, optDef.name, optVal);
                     }
                 } catch (e) {
                     console.error(`Error while getting options for ${id.name}:`, e);
@@ -311,6 +342,18 @@ class BuilderCompile {
             } catch (e) {
                 console.error("Error while getting main options:", e);
             }
+            // write the ini file:
+            if (iniSections.length > 0) {
+                let iniLines = [];
+                for (let section of iniSections) {
+                    iniLines.push("[" + section.name + "]");
+                    for (let pair of section.pairs) {
+                        iniLines.push(pair.key + "=" + pair.value);
+                    }
+                }
+                if (!Electron_FS.existsSync(Builder.Outpath)) Electron_FS.mkdirSync(Builder.Outpath);
+                Electron_FS.writeFileSync(optionsIniPath, iniLines.join("\r\n"));
+            }
             //
             env["YYPLATFORM_name"] = targetMachineFriendly;
             try {
@@ -318,10 +361,18 @@ class BuilderCompile {
                 optPlat ??= project.readYyFileSync(`options/${platName}/options_${platName}.yy`);
                 for (let key in optPlat) {
                     //if (!key.startsWith("option_")) continue;
-                    env["YYPLATFORM_" + key] = optPlat[key];
+                    let val = optPlat[key];
+                    if (typeof(val) == "boolean") val = val ? "True" : "False";
+                    env["YYPLATFORM_" + key] = val;
                 }
             } catch (e) {
                 console.error("Error while getting platform options:", e);
+            }
+            // I can't figure out why isRunningFromIDE returns false for builder-launched games
+            let appid = env["YYEXTOPT_Steamworks_AppID"];
+            if (appid != null) {
+                if (!Electron_FS.existsSync(Builder.Outpath)) Electron_FS.mkdirSync(Builder.Outpath);
+                Electron_FS.writeFileSync(Builder.Outpath + "/steam_appid.txt", "" + appid);
             }
             //
             env["YYTARGET_runtime"] = "VM";
@@ -336,9 +387,9 @@ class BuilderCompile {
             env["YYprojectPath"] = project.path;
             env["YYprojectDir"] = project.dir;
             env["YYruntimeLocation"] = Builder.Runtime;
-            let version = runtimeSelection;
-            if (version.startsWith("runtime-")) version = version.substring("runtime-".length);
-            env["YYruntimeVersion"] = version;
+            let runtimeVersion = runtimeSelection;
+            if (runtimeVersion.startsWith("runtime-")) runtimeVersion = runtimeVersion.substring("runtime-".length);
+            env["YYruntimeVersion"] = runtimeVersion;
             env["YYuserDir"] = Userpath;
             env["YYtempFolder"] = TemporaryUnmapped;
             env["YYtempFolderUnmapped"] = TemporaryUnmapped;
@@ -351,11 +402,11 @@ class BuilderCompile {
         /** @returns {bool} trouble */
         const runUserCommandStep_1 = async (path) => {
             if (!project.isGMS23) return false;
+            if (runUserCommandStep_env == null) runUserCommandStep_init_env();
             path = project.fullPath(path);
             //console.log(path, Electron_FS.existsSync(path));
             if (!Electron_FS.existsSync(path)) return false;
             // Well? I don't want to print streams when we're done, I want it as it happens
-            if (runUserCommandStep_env == null) runUserCommandStep_init_env();
             let proc;
             try {
                 output.write(`Running "${path}"`);
