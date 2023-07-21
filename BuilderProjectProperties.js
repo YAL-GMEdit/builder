@@ -35,7 +35,19 @@ class BuilderProjectProperties {
 		});
 		
 		//
-		let argsField = Preferences.addInput(group,
+		let extraArgsField = Preferences.addInput(group,
+			"Additional runner arguments",
+			json?.forkArguments ?? "",
+		(v) => {
+			if (v == "") v = null;
+			let json = ensureJSON(v == null);
+			if (json == null) return;
+			json.extraArguments = v;
+			ProjectProperties.save(project, project.properties);
+		}).querySelector("input");
+		
+		//
+		let forkArgsField = Preferences.addInput(group,
 			"Fork arguments override",
 			json?.forkArguments ?? "",
 		(v) => {
@@ -45,7 +57,7 @@ class BuilderProjectProperties {
 			json.forkArguments = v;
 			ProjectProperties.save(project, project.properties);
 		}).querySelector("input");
-		argsField.placeholder = BuilderPreferences.current.forkArguments;
+		forkArgsField.placeholder = BuilderPreferences.current.forkArguments;
 		
 		//
 		let steamAppIdEl = Preferences.addInput(group,

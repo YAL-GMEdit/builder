@@ -206,14 +206,60 @@ Builder = Object.assign(Builder, {
         let args = [
             "-game", `${outputPath}/${name}.${Builder.Extension}`
         ];
+        const parseArgs = (str) => {
+            if (str == null) return [];
+            str = str.trim();
+            if (str == "") return [];
+            if (str.startsWith("[")) try {
+                return JSON.parse(str);
+            } catch (e) {
+                console.log('Error parsing', str, e);
+                return [];
+            }
+            let result = [];
+            let start = 0, acc = "";
+            let pos = 0, len = str.length;
+            let isInQuotes = false
+            const flush = (till) => {
+                if (!(till > start || acc != "")) return;
+                result.push(acc + str.substring(start, till));
+                acc = "";
+            };
+            while (pos < len) {
+                let c = str.charAt(pos++);
+                if (c == ' ') {
+                    if (isInQuotes) {
+                        //
+                    } else {
+                        flush(pos - 1);
+                        start = pos;
+                    }
+                } else if (c == '"') {
+                    if (pos < len && str.charAt(pos) == '"') {
+                        acc += str.substring(start, pos);
+                        start = ++pos;
+                    } else {
+                        flush(pos - 1);
+                        start = pos;
+                        isInQuotes = !isInQuotes;
+                    }
+                }
+            }
+            flush(pos);
+            return result;
+        };
         if (builderSettings?.steamAppID != null) {
             if (builderSettings?.steamAppID != 0) args.push("-debug_steamapi");
         } else if (Electron_FS.existsSync(`${outputPath}/steam_appid.txt`)) {
             args.push("-debug_steamapi");
         }
+        {
+            let extraArguments = builderSettings?.extraArguments;
+            args = args.concat(parseArgs(extraArguments));
+        }
         if (isFork) {
             let forkArguments = builderSettings?.forkArguments ?? BuilderPreferences.current.forkArguments;
-            args = args.concat(forkArguments.split(" "));
+            args = args.concat(parseArgs(forkArguments));
         }
         
         let output = BuilderOutput.open(isFork);

@@ -347,10 +347,15 @@ class BuilderCompile {
                 let iniLines = [];
                 for (let section of iniSections) {
                     iniLines.push("[" + section.name + "]");
+                    if (section.name == "Steamworks") {
+                        let sdkPair = section.pairs.filter((p) => p.key == "SteamSDK")[0];
+                        if (sdkPair) sdkPair.value = sdkPair.value.split("\\\\").join("\\");
+                    }
                     for (let pair of section.pairs) {
                         iniLines.push(pair.key + "=" + pair.value);
                     }
                 }
+                iniLines.push("");
                 if (!Electron_FS.existsSync(Builder.Outpath)) Electron_FS.mkdirSync(Builder.Outpath);
                 Electron_FS.writeFileSync(optionsIniPath, iniLines.join("\r\n"));
             }
@@ -367,6 +372,10 @@ class BuilderCompile {
                 }
             } catch (e) {
                 console.error("Error while getting platform options:", e);
+            }
+            // 
+            if (x64flag && env["YYPLATFORM_option_windows_use_x64"] == "False") {
+                env["YYPLATFORM_option_windows_use_x64"] = "True";
             }
             // I can't figure out why isRunningFromIDE returns false for builder-launched games
             let appid = env["YYEXTOPT_Steamworks_AppID"];
