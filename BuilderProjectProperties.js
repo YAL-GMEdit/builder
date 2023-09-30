@@ -1,24 +1,24 @@
 class BuilderProjectProperties {
 	static build(project, target) {
 		const Preferences = $gmedit["ui.Preferences"];
-		let group = Preferences.addGroup(target, "builder Settings");
+		const group = Preferences.addGroup(target, "builder Settings");
 		const defaultVersion = "<default>";
 		
 		//
-		let ensureJSON = (isDefault) => {
-			let properties = project.properties;
+		const ensureJSON = (isDefault) => {
+			const properties = project.properties;
 			let json = properties.builderSettings;
 			if (isDefault && json == null) return null;
 			if (json == null) json = properties.builderSettings = {};
 			return json;
 		};
 		
-		let json = project.properties.builderSettings;
+		const json = project.properties.builderSettings;
 		const ProjectProperties = $gmedit["ui.project.ProjectProperties"];
 		
 		//
 		let versions = [defaultVersion];
-		for (let [_, set] of Object.entries(BuilderPreferences.current.runtimeSettings)) {
+		for (const [_, set] of Object.entries(BuilderPreferences.current.runtimeSettings)) {
 			versions = versions.concat(set.runtimeList);
 		}
 		
@@ -27,32 +27,32 @@ class BuilderProjectProperties {
 			json?.runtimeVersion ?? defaultVersion,
 			versions,
 		(v) => {
-			if (v == defaultVersion) v = null;
-			let json = ensureJSON(v == null);
+			if (v === defaultVersion) v = null;
+			const json = ensureJSON(v == null);
 			if (json == null) return;
 			json.runtimeVersion = v;
 			ProjectProperties.save(project, project.properties);
 		});
 		
 		//
-		let extraArgsField = Preferences.addInput(group,
+		const extraArgsField = Preferences.addInput(group,
 			"Additional runner arguments",
 			json?.forkArguments ?? "",
 		(v) => {
 			if (v == "") v = null;
-			let json = ensureJSON(v == null);
+			const json = ensureJSON(v == null);
 			if (json == null) return;
 			json.extraArguments = v;
 			ProjectProperties.save(project, project.properties);
 		}).querySelector("input");
 		
 		//
-		let forkArgsField = Preferences.addInput(group,
+		const forkArgsField = Preferences.addInput(group,
 			"Fork arguments override",
 			json?.forkArguments ?? "",
 		(v) => {
-			if (v == "") v = null;
-			let json = ensureJSON(v == null);
+			if (v === "") v = null;
+			const json = ensureJSON(v == null);
 			if (json == null) return;
 			json.forkArguments = v;
 			ProjectProperties.save(project, project.properties);
@@ -60,13 +60,13 @@ class BuilderProjectProperties {
 		forkArgsField.placeholder = BuilderPreferences.current.forkArguments;
 		
 		//
-		let steamAppIdEl = Preferences.addInput(group,
+		const steamAppIdEl = Preferences.addInput(group,
 			"Steam App ID override",
 			json?.steamAppID ?? "",
 		(v) => {
 			v = parseInt(v);
 			if (isNaN(v)) v = null;
-			let json = ensureJSON(v == null);
+			const json = ensureJSON(v == null);
 			if (json == null) return;
 			json.steamAppID = v;
 			ProjectProperties.save(project, project.properties);

@@ -40,7 +40,7 @@ class BuilderPreferences {
 		if (Electron_FS.existsSync(this.path)) {
 			try {
 				this.load();
-				let pref = this.current;
+				const pref = this.current;
 				if (pref.runtimeLocation != null) {
 					// migrate legacy settings
 					this.Preferences.runtimeSettings.Stable.location = this.Preferences.runtimeLocation;
@@ -59,22 +59,22 @@ class BuilderPreferences {
 	
 	static build() {
 		const Preferences = $gmedit["ui.Preferences"];
-		let root = document.createElement("div");
+		const root = document.createElement("div");
 		this.element = root;
 		const addSep = (out) => {
-			let hr = document.createElement("hr");
+			const hr = document.createElement("hr");
 			out.appendChild(hr);
 		}
 		
-		for (let [key, set] of Object.entries(this.current.runtimeSettings)) {
-			let runtimeGroup = Preferences.addGroup(root, `Runtime Settings (${key})`);
+		for (const [key, set] of Object.entries(this.current.runtimeSettings)) {
+			const runtimeGroup = Preferences.addGroup(root, `Runtime Settings (${key})`);
 			let element, label;
 			
 			element = Preferences.addInput(runtimeGroup, "Runtime Location", set.location, (value) => {
 				set.location = value;
 				BuilderPreferences.save();
 			});
-			let runtimeLocationInput = element.querySelector("input");
+			const runtimeLocationInput = element.querySelector("input");
 			label = element.querySelector("label");
 			label.appendChild(document.createTextNode(" ("));
 			label.appendChild(Preferences.createFuncAnchor("Reset", function() {
@@ -92,13 +92,13 @@ class BuilderPreferences {
 				set.selection = value;
 				BuilderPreferences.save();
 			});
-			let runtimeListSelect = element.querySelector("select");
+			const runtimeListSelect = element.querySelector("select");
 			label = element.querySelector("label");
 			label.appendChild(document.createTextNode(" ("));
 			label.appendChild(Preferences.createFuncAnchor("Rescan", function() {
 				runtimeListSelect.innerHTML = "";
-				for (let rt of Builder.GetRuntimes(set.location)) {
-					let option = document.createElement("option");
+				for (const rt of Builder.GetRuntimes(set.location)) {
+					const option = document.createElement("option");
 					option.innerHTML = option.value = rt;
 					runtimeListSelect.appendChild(option);
 				}
@@ -108,8 +108,8 @@ class BuilderPreferences {
 			label.appendChild(document.createTextNode(")"));
 		}
 		
-		let settingsGroup = Preferences.addGroup(root, "Builder Settings");
-		if (Builder.Platform == "win") {
+		const settingsGroup = Preferences.addGroup(root, "Builder Settings");
+		if (Builder.Platform === "win") {
 			Preferences.addCheckbox(settingsGroup, 'Use virtual drives', this.current.useVirtualDrives, (value) => {
 				this.current.useVirtualDrives = value;
 				this.save();
@@ -163,7 +163,7 @@ class BuilderPreferences {
 	
 	static ready() {
 		GMEdit.on("preferencesBuilt", (e) => {
-			let out = e.target.querySelector('.plugin-settings[for="builder"]');
+			const out = e.target.querySelector('.plugin-settings[for="builder"]');
 			if (this.element == null) this.build();
 			out.appendChild(this.element);
 		});

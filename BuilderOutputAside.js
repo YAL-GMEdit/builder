@@ -34,13 +34,13 @@ class BuilderOutputAside {
 		this.sizer.setAttribute("splitter-default-width", "" + (aceEditor.container.clientWidth >> 1));
 		this.sizer.classList.add("splitter-td");
 		
-		let nextCont = document.createElement("div");
+		const nextCont = document.createElement("div");
 		nextCont.classList.add("ace_container");
 		// .ace_container[editor] -> .ace_container[.ace_container[editor], splitter, .ace_container[aside_editor]]:
-		let mainCont = aceEditor.container.parentElement;
+		const mainCont = aceEditor.container.parentElement;
 		var mainChildren = [];
-		for (let el of mainCont.children) mainChildren.push(el);
-		for (let ch of mainChildren) {
+		for (const el of mainCont.children) mainChildren.push(el);
+		for (const ch of mainChildren) {
 			mainCont.removeChild(ch);
 			nextCont.appendChild(ch);
 		}
@@ -50,7 +50,7 @@ class BuilderOutputAside {
 		mainCont.appendChild(this.container);
 		this.parent = mainCont;
 		
-		var textarea = document.createElement("textarea");
+		const textarea = document.createElement("textarea");
 		this.container.appendChild(textarea);
 		this.aceEditor = GMEdit.aceTools.createEditor(textarea);
 		
@@ -61,8 +61,8 @@ class BuilderOutputAside {
 			name: "exitPeekAside",
 			bindKey: "Escape|Ctrl-W",
 			exec: (e) => {
-				for (let tab of $gmedit["ui.ChromeTabs"].element.querySelectorAll(".chrome-tab")) {
-					if (tab.gmlFile != e.session.gmlFile) continue;
+				for (const tab of $gmedit["ui.ChromeTabs"].element.querySelectorAll(".chrome-tab")) {
+					if (tab.gmlFile !== e.session.gmlFile) continue;
 					BuilderOutputAside.hide();
 					/*if (!tab.classList.contains("chrome-tab-current")) {
 						tab.querySelector(".chrome-tab-close").click();
@@ -74,13 +74,13 @@ class BuilderOutputAside {
 	}
 	
 	static emitResize() {
-		var e = new CustomEvent("resize");
+		const e = new CustomEvent("resize");
 		e.initEvent("resize");
 		window.dispatchEvent(e);
 	}
 	
 	static onFileClose(e) {
-		if (e.file == BuilderOutputAside.output?.gmlFile) {
+		if (e.file === BuilderOutputAside.output?.gmlFile) {
 			BuilderOutputAside.hide();
 		}
 	}

@@ -38,17 +38,17 @@ class BuilderOutput {
 				text = "\n" + text;
 			}
 		}
-		let pos = { row: row, column: col };
+		const pos = { row: row, column: col };
 		this.aceSession.insert(pos, text);
 		
-		let undoManager = this.aceSession.getUndoManager();
+		const undoManager = this.aceSession.getUndoManager();
 		if (undoManager) undoManager.markClean();
 		
-		for (let aceEditor of this.aceEditors) {
-			if (aceEditor.session.gmlFile != this.gmlFile) continue;
-			let renderer = aceEditor.renderer;
+		for (const aceEditor of this.aceEditors) {
+			if (aceEditor.session.gmlFile !== this.gmlFile) continue;
+			const renderer = aceEditor.renderer;
 			row = this.aceSession.getLength() - 1;
-			let pos = renderer.$cursorLayer.getPixelPosition({row: row, column: 0});
+			const pos = renderer.$cursorLayer.getPixelPosition({row: row, column: 0});
 			let offset = pos.top;
 			offset -= renderer.$size.scrollerHeight - renderer.lineHeight * 2;
 			renderer.session.setScrollTop(offset);
@@ -64,8 +64,8 @@ class BuilderOutput {
 		const title = `${isFork && forkAside ? "Fork" : "Output"} (${Builder.GetTime()})`;
 		
 		if (lookFor && reuseTab)
-		for (let tab of document.querySelectorAll(".chrome-tab")) {
-			if (tab.gmlFile == lookFor.gmlFile) {
+		for (const tab of document.querySelectorAll(".chrome-tab")) {
+			if (tab.gmlFile === lookFor.gmlFile) {
 				tab.querySelector(".chrome-tab-title-text").innerText = title;
 				if (forkAside) {
 					BuilderOutputAside.show(lookFor);
@@ -75,10 +75,10 @@ class BuilderOutput {
 		}
 		
 		const GmlFile = $gmedit["gml.file.GmlFile"];
-		let output = new BuilderOutput(title, window.aceEditor);
+		const output = new BuilderOutput(title, window.aceEditor);
 		if (forkAside) {
 			this.aside = output;
-			let currentTab = GmlFile.current.tabEl;
+			const currentTab = GmlFile.current.tabEl;
 			GmlFile.openTab(output.gmlFile);
 			BuilderOutputAside.show(output);
 			currentTab.click();

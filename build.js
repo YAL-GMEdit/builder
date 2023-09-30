@@ -15,11 +15,11 @@ Builder = Object.assign(Builder, {
     },
     Stop: function() {
         // Make sure a GMS2 project is open!
-        if (Builder.ProjectVersion($gmedit["gml.Project"].current) != 2) return;
+        if (Builder.ProjectVersion($gmedit["gml.Project"].current) !== 2) return;
 
         // Display errors and kill processes!
-        if (Builder.ErrorMet == true) Builder.Display();
-        if (Builder.Compiler != undefined) {
+        if (Builder.ErrorMet === true) Builder.Display();
+        if (Builder.Compiler !== undefined) {
             Builder.Compiler.kill();
             Builder.Compiler = undefined;
         }
@@ -31,14 +31,14 @@ Builder = Object.assign(Builder, {
     },
     Fork: function() {
         // Make sure a GMS2 project is open!
-        if (Builder.ProjectVersion($gmedit["gml.Project"].current) != 2) return;
+        if (Builder.ProjectVersion($gmedit["gml.Project"].current) !== 2) return;
 
         // Fork runner and add it to process list!
         Builder.Runner.push(Builder.Spawn(Builder.Runtime, Builder.Outpath, Builder.Name, true));
     },
     CleanRuntime: function() {
         // you can run the game again
-        for (let item of Builder.MenuItems.list) {
+        for (const item of Builder.MenuItems.list) {
             item.enabled = item.id.includes("-run") || item.id.includes("-clean");
         }
         BuilderDrives.removeCurrent();
@@ -60,7 +60,7 @@ Builder = Object.assign(Builder, {
     },
     CleanGUI: function() {
         console.log("clean?")
-        let result = Builder.CleanCache((err) => {
+        const result = Builder.CleanCache((err) => {
             if (err) {
                 Electron_Dialog.showErrorBox({
                     type: "error",
@@ -90,31 +90,31 @@ Builder = Object.assign(Builder, {
     },
     Parse: function(string, type) {
         // Parse error output!
-        let Contents = (string.toString()).split("\n");
+        const Contents = (string.toString()).split("\n");
         for(let i = 0; i < Contents.length; i++) {
-            let Message = Contents[i];
+            const Message = Contents[i];
             switch (type) {
                 case 0: { // GMAssetCompiler.exe
-                    if (Message.slice(0, 8) == "Error : ") {
+                    if (Message.slice(0, 8) === "Error : ") {
                         Builder.Errors.push(Message.slice(8).trim());
                         Builder.ErrorMet = true;
-                    } else if (Message.startsWith("Final Compile") == true && Builder.ErrorMet == true) {
+                    } else if (Message.startsWith("Final Compile") === true && Builder.ErrorMet === true) {
                         return 1;
                     }
                     break;
                 }
 
                 case 1: { // Runner.exe
-                    if (BuilderPreferences.current.displayLine == true && (Message.startsWith("ERROR!!! :: ") == true && Contents[i + 1].startsWith("FATAL ERROR") == true)) {
+                    if (BuilderPreferences.current.displayLine == true && (Message.startsWith("ERROR!!! :: ") === true && Contents[i + 1].startsWith("FATAL ERROR") === true)) {
                         for(let j = i + 1; j < Contents.length; j++) {
-                            if (Contents[j].startsWith("stack frame is") == true) {
-                                let Stack = Builder.ParseDescriptor(Contents[++j]);
-                                if ($gmedit["ui.OpenDeclaration"].openLocal(Stack.Asset, Stack.Line) == true) {
+                            if (Contents[j].startsWith("stack frame is") === true) {
+                                const Stack = Builder.ParseDescriptor(Contents[++j]);
+                                if ($gmedit["ui.OpenDeclaration"].openLocal(Stack.Asset, Stack.Line) === true) {
                                     setTimeout(() => {
                                         let Offset = 0;
-                                        if (Stack.Type == "Object") {
+                                        if (Stack.Type === "Object") {
                                             for(let Event = Builder.GetEvent(Stack.Event), k = 0; k < aceEditor.session.getLength(); k++) {
-                                                if (aceEditor.session.getLine(k).startsWith("#event " + Event) == true) {
+                                                if (aceEditor.session.getLine(k).startsWith("#event " + Event) === true) {
                                                     Offset = ++k;
                                                     break;
                                                 }
@@ -135,13 +135,13 @@ Builder = Object.assign(Builder, {
     },
     ParseDescriptor: function(string) {
         // Parse error descriptor and return object about it!
-        let Descriptor = {};
+        const Descriptor = {};
         if (string.startsWith("gml_")) string = string.slice(4);
         Descriptor.Type = string.slice(0, string.indexOf("_"));
         string = string.slice(Descriptor.Type.length + 1);
         Descriptor.Line = parseInt(string.slice(string.lastIndexOf("(") + 1, string.lastIndexOf(")")).replace("line", ""));
         string = string.slice(0, string.lastIndexOf("(")).trim();
-        if (Descriptor.Type == "Object") {
+        if (Descriptor.Type === "Object") {
             Descriptor.Event = string.slice(string.lastIndexOf("_", string.lastIndexOf("_") - 1) + 1);
             string = string.slice(0, (Descriptor.Event.length * -1) - 1);
         }
@@ -150,10 +150,10 @@ Builder = Object.assign(Builder, {
     },
     GetEvent: function(event) {
         // Turn descriptor event into GMEdit event name! 
-        let SubEvent = event.slice(event.lastIndexOf("_") + 1), GmlEvent = $gmedit["parsers.GmlEvent"];
+        const SubEvent = event.slice(event.lastIndexOf("_") + 1), GmlEvent = $gmedit["parsers.GmlEvent"];
         event = event.slice(0, event.lastIndexOf("_"));
         for(let i = 0; i < GmlEvent.t2sc.length; i++) {
-            if (GmlEvent.t2sc[i] == event) {
+            if (GmlEvent.t2sc[i] === event) {
                 return GmlEvent.i2s[i][SubEvent];
             }
         }
@@ -161,20 +161,20 @@ Builder = Object.assign(Builder, {
     },
     Display: function() {
         // Display errors in new tab!
-        let project = $gmedit["gml.Project"].current;
-        let GmlFile = $gmedit["gml.file.GmlFile"];
+        const project = $gmedit["gml.Project"].current;
+        const GmlFile = $gmedit["gml.file.GmlFile"];
         let output = new GmlFile(`Compilation Errors`, null, $gmedit["file.kind.gml.KGmlSearchResults"].inst, `// Compile failed with ${Builder.Errors.length} error${(Builder.Errors.length == 1 ? "" : "s")}\n\n`); 
         output.Write = (e) => {output.editor.session.setValue(output.editor.session.getValue() + "\n" + e); }
-        for (let error of Builder.Errors) {
-            let colonPos = error.indexOf(":");
-            let descriptor = Builder.ParseDescriptor(error.slice(0, colonPos).trim());
-            let errorText = error.slice(colonPos + 1).trim();
+        for (const error of Builder.Errors) {
+            const colonPos = error.indexOf(":");
+            const descriptor = Builder.ParseDescriptor(error.slice(0, colonPos).trim());
+            const errorText = error.slice(colonPos + 1).trim();
             let errorLine = "";
             grabErrorLine: {
-                let resourceGUID = project.yyResourceGUIDs[descriptor.Asset];
-                if (resourceGUID == null) break grabErrorLine;
-                let resource = project.yyResources[resourceGUID];
-                if (resource == null) break grabErrorLine;
+                const resourceGUID = project.yyResourceGUIDs[descriptor.Asset];
+                if (resourceGUID === null) break grabErrorLine;
+                const resource = project.yyResources[resourceGUID];
+                if (resource === null) break grabErrorLine;
                 let resourcePath;
                 if (resource.Value) {
                     resourcePath = resource.Value.resourcePath;
@@ -197,11 +197,11 @@ Builder = Object.assign(Builder, {
     Spawn: function(runtime, outputPath, name, isFork, callback) {
         // Spawn an instance of the runner!
         let runnerPath = Builder.RunnerPath;
-        runnerPath ??= (Builder.Platform == "win"
+        runnerPath ??= (Builder.Platform === "win"
             ? `${runtime}/windows/Runner.exe`
             : `${runtime}/mac/YoYo Runner.app/Contents/MacOS/Mac_Runner`
         );
-        let builderSettings = $gmedit["gml.Project"].current.properties.builderSettings;
+        const builderSettings = $gmedit["gml.Project"].current.properties.builderSettings;
         
         let args = [
             "-game", `${outputPath}/${name}.${Builder.Extension}`
@@ -209,33 +209,33 @@ Builder = Object.assign(Builder, {
         const parseArgs = (str) => {
             if (str == null) return [];
             str = str.trim();
-            if (str == "") return [];
+            if (str === "") return [];
             if (str.startsWith("[")) try {
                 return JSON.parse(str);
             } catch (e) {
                 console.log('Error parsing', str, e);
                 return [];
             }
-            let result = [];
+            const result = [];
             let start = 0, acc = "";
             let pos = 0, len = str.length;
             let isInQuotes = false
             const flush = (till) => {
-                if (!(till > start || acc != "")) return;
+                if (!(till > start || acc !== "")) return;
                 result.push(acc + str.substring(start, till));
                 acc = "";
             };
             while (pos < len) {
-                let c = str.charAt(pos++);
-                if (c == ' ') {
+                const c = str.charAt(pos++);
+                if (c === " ") {
                     if (isInQuotes) {
                         //
                     } else {
                         flush(pos - 1);
                         start = pos;
                     }
-                } else if (c == '"') {
-                    if (pos < len && str.charAt(pos) == '"') {
+                } else if (c === "\"") {
+                    if (pos < len && str.charAt(pos) === "\"") {
                         acc += str.substring(start, pos);
                         start = ++pos;
                     } else {
@@ -248,40 +248,40 @@ Builder = Object.assign(Builder, {
             flush(pos);
             return result;
         };
-        if (builderSettings?.steamAppID != null) {
-            if (builderSettings?.steamAppID != 0) args.push("-debug_steamapi");
+        if (builderSettings?.steamAppID !== null) {
+            if (builderSettings?.steamAppID !== 0) args.push("-debug_steamapi");
         } else if (Electron_FS.existsSync(`${outputPath}/steam_appid.txt`)) {
             args.push("-debug_steamapi");
         }
         {
-            let extraArguments = builderSettings?.extraArguments;
+            const extraArguments = builderSettings?.extraArguments;
             args = args.concat(parseArgs(extraArguments));
         }
         if (isFork) {
-            let forkArguments = builderSettings?.forkArguments ?? BuilderPreferences.current.forkArguments;
+            const forkArguments = builderSettings?.forkArguments ?? BuilderPreferences.current.forkArguments;
             args = args.concat(parseArgs(forkArguments));
         }
         
-        let output = BuilderOutput.open(isFork);
+        const output = BuilderOutput.open(isFork);
         output.write(`Running ${[runnerPath].concat(args).join(" ")}...\n`);
-        let runner = Builder.Command.spawn(runnerPath, args, {
+        const runner = Builder.Command.spawn(runnerPath, args, {
             cwd: outputPath
         });
         runner.stdout.on("data", (e) => {
-            let text = e.toString();
+            const text = e.toString();
             switch (Builder.Parse(text, 1)) {
                 default: output.write(text, false);
             }
         });
         runner.addListener("close", function(code) {
-            let runners = Builder.Runner;
-            let i = runners.indexOf(this);
+            const runners = Builder.Runner;
+            const i = runners.indexOf(this);
             if (i >= 0) runners.splice(i, 1);
             
-            if (code != 0 && code != null) output.write(`Runner exited with non-zero status (0x${code.toString(16)} = ${code})`)
+            if (code !== 0 && code !== null) output.write(`Runner exited with non-zero status (0x${code.toString(16)} = ${code})`)
             if (callback) callback(code);
             Builder.CleanRuntime();
-            if (runners.length == 0 && BuilderPreferences.current.cleanAfterRun) Builder.CleanCache();
+            if (runners.length === 0 && BuilderPreferences.current.cleanAfterRun) Builder.CleanCache();
         });
         return runner;
     },

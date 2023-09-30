@@ -19,29 +19,29 @@ Builder = {
                 }
             } else return null;
         }
-        for (let platform of Electron_FS.readdirSync(path)) {
-            let platformPath = `${path}/${platform}`;
+        for (const platform of Electron_FS.readdirSync(path)) {
+            const platformPath = `${path}/${platform}`;
             if (!Electron_FS.statSync(platformPath).isDirectory()) continue;
-            let fnamesPath = platformPath + "/fnames";
+            const fnamesPath = platformPath + "/fnames";
             if (!Electron_FS.existsSync(fnamesPath)) continue;
             let apiText = Electron_FS.readFileSync(fnamesPath, "utf8");
             //
-            let custDir = custBase + "/" + platform;
+            const custDir = custBase + "/" + platform;
             if (Electron_FS.existsSync(custDir)) {
-                let replText = getText(custDir + "/replace.gml");
+                const replText = getText(custDir + "/replace.gml");
                 if (replText) apiText = GmlAPILoader.applyPatchFile(apiText, replText);
                 //
-                let extraText = getText(custDir + "/extra.gml");
+                const extraText = getText(custDir + "/extra.gml");
                 if (extraText) apiText += "\n" + extraText;
             }
             //
-            let args = GmlAPILoader.getArgs();
+            const args = GmlAPILoader.getArgs();
             GmlParseAPI.loadStd(apiText, args);
         }
     },
     ProjectVersion: function(project) {
         // GMEdit seems to adjust the .version property to be a gml_GmlVersion class, check if it's an object or not to maintain backwards compatibility
-        if (typeof(project.version) == "object") {
+        if (typeof(project.version) === "object") {
             switch (project.version.config.projectMode) {
                 case "gms2": return 2;
                 case "gms1": return 1;
@@ -51,10 +51,10 @@ Builder = {
         return project.version;
     },
     GetRuntimes: function(path) {
-        let Runtimes = [];
+        const Runtimes = [];
         try {
             Electron_FS.readdirSync(path).forEach((e) => {
-                let rtStat = Electron_FS.statSync(path + e);
+                const rtStat = Electron_FS.statSync(path + e);
                 if (rtStat.isDirectory() && Electron_FS.existsSync(path + e + "/fnames")) {
                     Runtimes.push(e);
                 }
@@ -78,14 +78,14 @@ Builder = {
             return;
         }
         
-        if (set.selection.trim() == "" || !set.runtimeList.includes(set.selection)) {
+        if (set.selection.trim() === "" || !set.runtimeList.includes(set.selection)) {
             set.selection = set.runtimeList[0];
         }
     },
     Initalize: function() {
         // Check if platform is supported
         this.Platform = (this.Platform.includes("Windows") ? "win" : (this.Platform.includes("Darwin") ? "mac" : "unknown"));
-        if (this.Platform == "unknown") {
+        if (this.Platform === "unknown") {
             Electron_Dialog.showMessageBox({
                 type: "error",
                 title: "Builder",
@@ -96,11 +96,11 @@ Builder = {
         
         // Load preferences file
         BuilderPreferences.init();
-        for (let [key, val] of Object.entries(BuilderPreferences.current.runtimeSettings)) {
-            this.InitalizeRuntimes(val, key == "Stable");
+        for (const [key, val] of Object.entries(BuilderPreferences.current.runtimeSettings)) {
+            this.InitalizeRuntimes(val, key === "Stable");
         }
         
-        let runtimeSettings = BuilderPreferences.current.runtimeSettings.Stable;
+        const runtimeSettings = BuilderPreferences.current.runtimeSettings.Stable;
         Builder.LoadKeywords(runtimeSettings.location + runtimeSettings.selection);
         return true;
     }
@@ -130,9 +130,9 @@ Builder = {
             exec: Builder.Fork,
         }];
         
-        let hashHandler = $gmedit["ui.KeyboardShortcuts"].hashHandler;
-        let AceCommands = $gmedit["ace.AceCommands"];
-        for (let cmd of commands) {
+        const hashHandler = $gmedit["ui.KeyboardShortcuts"].hashHandler;
+        const AceCommands = $gmedit["ace.AceCommands"];
+        for (const cmd of commands) {
             hashHandler.addCommand(cmd);
             AceCommands.add(cmd);
             AceCommands.addToPalette({
@@ -150,7 +150,7 @@ Builder = {
             }
 
             // Create main menu items!
-            let MainMenu = $gmedit["ui.MainMenu"].menu;
+            const MainMenu = $gmedit["ui.MainMenu"].menu;
             for (let [index, mainMenuItem] of MainMenu.items.entries()) {
                 if (mainMenuItem.id != "close-project") continue;
                 Builder.MenuItems.list = [
@@ -200,7 +200,7 @@ Builder = {
                         click: Builder.CleanGUI
                     }),
                 ];
-                for (let newItem of Builder.MenuItems.list) {
+                for (const newItem of Builder.MenuItems.list) {
                     MainMenu.insert(++index, newItem);
                 }
                 break;
@@ -214,38 +214,38 @@ Builder = {
             initCommands();
             
             // Hook into finishedIndexing
-            let Project = $gmedit["gml.Project"], finishedIndexing = Project.prototype.finishedIndexing;
+            const Project = $gmedit["gml.Project"], finishedIndexing = Project.prototype.finishedIndexing;
             function onFinishedIndexing() {
-                if (Builder.ProjectVersion(this) != 2) return;
+                if (Builder.ProjectVersion(this) !== 2) return;
                 this.configs = ["default"];
-                let project = Project.current;
-                let projectContent = project.readTextFileSync(project.name);
+                const project = Project.current;
+                const projectContent = project.readTextFileSync(project.name);
                 if ($gmedit["yy.YyJson"].isExtJson(projectContent)) { // 2.3
                     function addConfigRec(project, config) {
                         if (!project.configs.includes(config.name)) project.configs.push(config.name);
-                        for (let childConfig of config.children) addConfigRec(project, childConfig);
+                        for (const childConfig of config.children) addConfigRec(project, childConfig);
                     }
                     addConfigRec(this, $gmedit["yy.YyJson"].parse(projectContent).configs);
                 } else { // 2.2
-                    for (let configData of JSON.parse(projectContent).configs) {
-                        for (let configName of configData.split(";")) {
+                    for (const configData of JSON.parse(projectContent).configs) {
+                        for (const configName of configData.split(";")) {
                             if (!this.configs.includes(configName)) this.configs.push(configName);
                         }
                     }
                 }
                 
-                let sf = Builder.SessionsFile;
+                const sf = Builder.SessionsFile;
                 if (sf.sync()) sf.data = {};
-                let path = project.path;
-                let pc = sf.data[path];
+                const path = project.path;
+                const pc = sf.data[path];
                 if (pc) pc.mtime = Date.now();
-                this.config = (pc && pc.config) || "default";
+                this.config = pc?.config ?? "default";
                 sf.flush();
                 
-                let TreeView = $gmedit["ui.treeview.TreeView"];
+                const TreeView = $gmedit["ui.treeview.TreeView"];
                 let Configurations = undefined;
-                for (let dir of document.querySelectorAll(".dir")) {
-                    if (dir.textContent == "Configs") {
+                for (const dir of document.querySelectorAll(".dir")) {
+                    if (dir.textContent === "Configs") {
                         Configurations = dir;
                         break;
                     }
@@ -253,13 +253,13 @@ Builder = {
                 Configurations = Configurations || TreeView.makeAssetDir("Configs", "");
                 
                 this.configs.forEach((configName) => {
-                    let Configuration = TreeView.makeItem(configName);
+                    const Configuration = TreeView.makeItem(configName);
                     Configuration.addEventListener("dblclick", function() {
                         Project.current.config = configName;
                         //
-                        let sf = Builder.SessionsFile;
+                        const sf = Builder.SessionsFile;
                         if (sf.sync()) sf.data = {};
-                        let path = Project.current.path;
+                        const path = Project.current.path;
                         let pc = sf.data[path];
                         if (pc == null) pc = sf.data[path] = { };
                         pc.config = configName;
@@ -275,7 +275,7 @@ Builder = {
                 document.getElementById("project-name").innerText = `${Project.current.displayName} (${this.config})`;
             }
             Project.prototype.finishedIndexing = function(arguments) {
-                let result = finishedIndexing.apply(this, arguments);
+                const result = finishedIndexing.apply(this, arguments);
                 try {
                     onFinishedIndexing.call(this);
                 } catch (x) {
@@ -285,17 +285,17 @@ Builder = {
             }
             
             function projectOpened() {
-                for (let item of Builder.MenuItems.list) item.enabled = false;
-                let project = $gmedit["gml.Project"].current;
-                if (Builder.ProjectVersion(project) == 2) {
+                for (const item of Builder.MenuItems.list) item.enabled = false;
+                const project = $gmedit["gml.Project"].current;
+                if (Builder.ProjectVersion(project) === 2) {
                     Builder.MenuItems.run.enabled = true;
                     Builder.MenuItems.runAndFork.enabled = true;
                     Builder.MenuItems.clean.enabled = true;
                     let runtime;
                     const pref = BuilderPreferences.current;
-                    if (project.version.name == "v23"
+                    if (project.version.name === "v23"
                         && pref.runtimeSettings.Stable.selection < "runtime-2.3"
-                        && pref.runtimeSettings.Beta.selection != ""
+                        && pref.runtimeSettings.Beta.selection !== ""
                     ) {
                         // if runtime is set to 2.2.5 but project uses 2.3, prefer a beta runtime
                         runtime = pref.runtimeSettings.Beta;
@@ -307,7 +307,7 @@ Builder = {
             GMEdit.on("projectOpen", projectOpened);
         
             GMEdit.on("projectClose", function() {
-                for (let item of Builder.MenuItems.list) item.enabled = false;
+                for (const item of Builder.MenuItems.list) item.enabled = false;
             });
             
             projectOpened();
