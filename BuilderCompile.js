@@ -127,7 +127,7 @@ class BuilderCompile {
         let GMAssetCompilerPathOrig = GMAssetCompilerDirOrig + "/GMAssetCompiler.exe";
         const GMAssetCompilerDir2022Container = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "windows" : "osx"}`;
         const isArm = Electron_FS.existsSync(`${GMAssetCompilerDir2022Container}/arm64`);
-        let GMAssetCompilerDir2022 = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "windows" : "osx"}/${isArm ? 'arm64' : 'x86'}`;
+        let GMAssetCompilerDir2022 = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "windows" : "osx"}/${isArm ? 'arm64' : 'x64'}`;
         let GMAssetCompilerPath2022 = `${GMAssetCompilerDir2022}/GMAssetCompiler${isWindows ? ".exe" : ""}`;
         let GMAssetCompilerDir = GMAssetCompilerDirOrig;
         let GMAssetCompilerPath = GMAssetCompilerPathOrig;
