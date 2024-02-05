@@ -109,7 +109,12 @@ class BuilderCompile {
             }
             // for an off-chance that your %LOCALAPPDATA%/GameMakerStudio2 directory doesn't exist
             if (!Electron_FS.existsSync(Temporary)) Electron_FS.mkdirSync(Temporary);
-            Temporary += `${isWindows ? "" : "/GameMakerStudio2"}/GMS2TEMP`;
+            if (!isWindows) {
+                Temporary += "/GameMakerStudio2";
+                if (!Electron_FS.existsSync(Temporary)) Electron_FS.mkdirSync(Temporary);
+            }
+            Temporary += "/GMS2TEMP";
+            if (!Electron_FS.existsSync(Temporary)) Electron_FS.mkdirSync(Temporary);
             if (!Electron_FS.existsSync(Temporary)) Electron_FS.mkdirSync(Temporary);
         }
         output.write("Temp directory: " + Temporary);
@@ -121,7 +126,9 @@ class BuilderCompile {
         // Check for GMAssetCompiler and Runner files!
         let GMAssetCompilerDirOrig = Builder.Runtime + "/bin";
         let GMAssetCompilerPathOrig = GMAssetCompilerDirOrig + "/GMAssetCompiler.exe";
-        let GMAssetCompilerDir2022 = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "windows" : "osx"}/x64`;
+        const GMAssetCompilerDir2022Container = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "windows" : "osx"}`;
+        const isArm = Electron_FS.existsSync(`${GMAssetCompilerDir2022Container}/arm64`);
+        let GMAssetCompilerDir2022 = `${Builder.Runtime}/bin/assetcompiler/${isWindows ? "windows" : "osx"}/${isArm ? 'arm64' : 'x64'}`;
         let GMAssetCompilerPath2022 = `${GMAssetCompilerDir2022}/GMAssetCompiler${isWindows ? ".exe" : ""}`;
         let GMAssetCompilerDir = GMAssetCompilerDirOrig;
         let GMAssetCompilerPath = GMAssetCompilerPathOrig;
@@ -154,7 +161,7 @@ class BuilderCompile {
                 x64flag = true;
             } else runnerPath = null;
         } else {
-            if (Electron_FS.existsSync(runnerPath = `${Builder.Runtime}/mac/YoYo Runner.app`)) {
+            if (Electron_FS.existsSync(runnerPath = `${Builder.Runtime}/mac/YoYo Runner.app/Contents/MacOS/Mac_Runner`)) {
                 // OK!
             } else runnerPath = null;
         }
