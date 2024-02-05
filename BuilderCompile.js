@@ -1,5 +1,6 @@
 class BuilderCompile {
     static async run(autoRunFork) {
+        const path = require("path")
         // Make sure a GMS2 project is open!
         let project = $gmedit["gml.Project"].current;
         if (Builder.ProjectVersion(project) != 2) return;
@@ -317,6 +318,7 @@ class BuilderCompile {
                     }
                     for (let optDef of ext.options) {
                         if (optDef.optType == 5) continue; // label!
+                        
                         let optGUID = optDef.guid;
                         let optVal = configurables[optGUID];
                         if (optVal != null
@@ -325,6 +327,13 @@ class BuilderCompile {
                         ) optVal = optVal.Default.value;
                         optVal ??= optDef.defaultValue;
                         if (optVal == null) continue;
+                        
+                        if (optDef.optType == 4) { // path!
+                            if (!path.isAbsolute(optVal)) {
+                                optVal = path.normalize(path.join(project.dir, optVal));
+                            }
+                        }
+                        
                         env[`YYEXTOPT_${extName}_${optDef.name}`] = optVal;
                         if (optDef.exportToINI) iniAdd(extName, optDef.name, optVal);
                     }
