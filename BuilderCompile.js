@@ -1,9 +1,14 @@
 class BuilderCompile {
-    static async run(autoRunFork) {
-        const path = require("path")
-        // Make sure a GMS2 project is open!
+    static run(autoRunFork) {
         let project = $gmedit["gml.Project"].current;
-        if (Builder.ProjectVersion(project) != 2) return;
+        if (Builder.ProjectVersion(project) != 2) return false;
+        BuilderCompile.runAsync(autoRunFork, project);
+        return true;
+    }
+    static async runAsync(autoRunFork, project) {
+        project ??= $gmedit["gml.Project"].current;
+        
+        const path = require("path")
         const isWindows = (Builder.Platform == "win");
 
         // Clear any past errors!

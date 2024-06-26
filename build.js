@@ -11,7 +11,7 @@ Builder = Object.assign(Builder, {
     Drive: "",
     Drives: [],
     Run: function(fork) {
-        BuilderCompile.run(fork);
+        return BuilderCompile.run(fork);
     },
     Stop: function() {
         // Make sure a GMS2 project is open!
