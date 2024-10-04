@@ -217,17 +217,23 @@ Builder = {
             let Project = $gmedit["gml.Project"], finishedIndexing = Project.prototype.finishedIndexing;
             function onFinishedIndexing() {
                 if (Builder.ProjectVersion(this) != 2) return;
-                this.configs = ["default"];
-                let project = Project.current;
-                let projectContent = project.readTextFileSync(project.name);
-                if ($gmedit["yy.YyJson"].isExtJson(projectContent)) { // 2.3
+                const project = Project.current;
+                const projectContent = project.readTextFileSync(project.name);
+                
+                const v23 = $gmedit['gml.Project'].current.isGMS23;
+                if (v23 == null) v23 = $gmedit["yy.YyJson"].isExtJson(projectContent);
+                
+                const projectRoot = $gmedit["yy.YyJson"].parse(projectContent);
+                if (v23) {
+                    this.configs = [];
                     function addConfigRec(project, config) {
                         if (!project.configs.includes(config.name)) project.configs.push(config.name);
                         for (let childConfig of config.children) addConfigRec(project, childConfig);
                     }
-                    addConfigRec(this, $gmedit["yy.YyJson"].parse(projectContent).configs);
-                } else { // 2.2
-                    for (let configData of JSON.parse(projectContent).configs) {
+                    addConfigRec(this, projectRoot.configs);
+                } else {
+                    this.configs = ["default"];
+                    for (let configData of projectRoot.configs) {
                         for (let configName of configData.split(";")) {
                             if (!this.configs.includes(configName)) this.configs.push(configName);
                         }
@@ -239,7 +245,7 @@ Builder = {
                 let path = project.path;
                 let pc = sf.data[path];
                 if (pc) pc.mtime = Date.now();
-                this.config = (pc && pc.config) || "default";
+                this.config = (pc && pc.config) || (v23 ? "Default" : "default");
                 sf.flush();
                 
                 let TreeView = $gmedit["ui.treeview.TreeView"];
