@@ -442,7 +442,8 @@ class BuilderCompile {
                 output.write(`Running "${path}"`);
                 output.write("");
                 proc = Builder.Command.spawn(path, {
-                    env: runUserCommandStep_env
+                    env: runUserCommandStep_env,
+                    shell: true,
                 });
             } catch (e) {
                 output.write(`Failed to run "${path}": ` + e);
