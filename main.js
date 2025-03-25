@@ -316,7 +316,17 @@ Builder = {
                 for (let item of Builder.MenuItems.list) item.enabled = false;
             });
             
-            projectOpened();
+            const dispatchProjectOpenOnReady = $gmedit["plugins.PluginManager"].dispatchProjectOpenOnReady;
+            if (dispatchProjectOpenOnReady === undefined) {
+                projectOpened();
+            } else if (dispatchProjectOpenOnReady === true) {
+                let project = $gmedit["gml.Project"].current;
+                try {
+                    onFinishedIndexing.call(project);
+                } catch (x) {
+                    console.error(x);
+                }
+            }
         }
     });
 })();
