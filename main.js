@@ -214,16 +214,18 @@ Builder = {
             initCommands();
             
             // Hook into finishedIndexing
-            let Project = $gmedit["gml.Project"], finishedIndexing = Project.prototype.finishedIndexing;
+            const Project = $gmedit["gml.Project"];
+            const YyJson = $gmedit["yy.YyJson"];
+            let finishedIndexing = Project.prototype.finishedIndexing;
             function onFinishedIndexing() {
                 if (Builder.ProjectVersion(this) != 2) return;
                 const project = Project.current;
                 const projectContent = project.readTextFileSync(project.name);
                 
-                const v23 = $gmedit['gml.Project'].current.isGMS23;
-                if (v23 == null) v23 = $gmedit["yy.YyJson"].isExtJson(projectContent);
+                const v23 = Project.current.isGMS23;
+                if (v23 == null) v23 = YyJson.isExtJson(projectContent);
                 
-                const projectRoot = $gmedit["yy.YyJson"].parse(projectContent);
+                const projectRoot = YyJson.parse(projectContent);
                 if (v23) {
                     this.configs = [];
                     function addConfigRec(project, config) {
@@ -237,6 +239,16 @@ Builder = {
                         for (let configName of configData.split(";")) {
                             if (!this.configs.includes(configName)) this.configs.push(configName);
                         }
+                    }
+                }
+                if (this.builderIDEVersion == null) {
+                    if (v23) {
+                        const md = projectRoot.MetaData;
+                        if (md) {
+                            this.builderIDEVersion = md.IDEVersion;
+                        } else this.builderIDEVersion = "2.3.0.0";
+                    } else {
+                        this.builderIDEVersion = "2.2.5.0";
                     }
                 }
                 

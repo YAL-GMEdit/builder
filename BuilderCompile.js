@@ -42,21 +42,106 @@ class BuilderCompile {
         }
 
         // Find the temporary directory!
+        output.write(`IDE: ${project.builderIDEVersion}`);
         let builderSettings = project.properties.builderSettings;
         let runtimeSelection;
-        if (builderSettings?.runtimeVersion) {
-            let found = false;
-            runtimeSelection = builderSettings.runtimeVersion;
-            for (let [_, set] of Object.entries(BuilderPreferences.current.runtimeSettings)) {
-                if (!set.runtimeList.includes(runtimeSelection)) continue;
-                Builder.Runtime = set.location + runtimeSelection;
-                found = true;
-                break;
+        function removeRuntimePrefix(version) {
+            const prefixRegex = /^runtime-(.+)/;
+            const mt = prefixRegex.exec(version);
+            return mt ? mt[1] : version;
+        }
+        function findExactRuntime(desiredVersion) {
+            desiredVersion = removeRuntimePrefix(desiredVersion);
+            for (let set of Object.values(BuilderPreferences.current.runtimeSettings)) {
+                for (let runtimeVersion of set.runtimeList) {
+                    let runtimeVersionNP = removeRuntimePrefix(runtimeVersion);
+                    if (runtimeVersionNP != desiredVersion) continue;
+                    return set.location + runtimeVersion;
+                }
             }
-            if (!found) return abort(`Couldn't find runtime ${runtimeSelection} that is set in project properties!`);
+            return null;
+        }
+        if (builderSettings?.runtimeVersion) {
+            runtimeSelection = builderSettings.runtimeVersion;
+            let rtPath = findExactRuntime(runtimeSelection);
+            if (rtPath == null) return abort(`Couldn't find runtime ${runtimeSelection} that is set in project properties!`);
+            Builder.Runtime = rtPath;
         } else {
-            runtimeSelection = Builder.RuntimeSettings.selection;
-            Builder.Runtime = Builder.RuntimeSettings.location + runtimeSelection;
+            function getRuntimeNumbers(version) {
+                let parts = version.split(".");
+                parts = parts.map(part => {
+                    let n = parseInt(part);
+                    return isNaN(n) ? 0 : n;
+                });
+                return parts;
+            }
+            function findClosestRuntime(prefix, oldest = false) {
+                for (const set of Object.values(BuilderPreferences.current.runtimeSettings)) {
+                    let rtl = set.runtimeList;
+                    rtl = rtl.map(v => {
+                        const vnp = removeRuntimePrefix(v);
+                        return { version: v, noPrefix: vnp, numbers: getRuntimeNumbers(vnp) };
+                    });
+                    rtl = rtl.filter(v => v.noPrefix.startsWith(prefix));
+                    if (rtl.length == 0) continue;
+                    rtl.sort((a, b) => {
+                        const an = a.numbers;
+                        const bn = b.numbers;
+                        const n = Math.max(an.length, bn.length);
+                        for (let i = 0; i < n; i++) {
+                            const av = an[i] ?? 0;
+                            const bv = bn[i] ?? 0;
+                            const d = bv - av;
+                            if (oldest) d = -d;
+                            if (d != 0) return d;
+                        }
+                        return 0;
+                    });
+                    const rt = rtl[0];
+                    rt.path = set.location + rt.version;
+                    return rt;
+                }
+                return null;
+            }
+            //
+            runtimeSelection = null;
+            let ideVersion = project.builderIDEVersion;
+            const isLTS = /^20\d\d\.0\./.test(ideVersion);
+            let rtPath = findExactRuntime(ideVersion);
+            if (rtPath) {
+                runtimeSelection = ideVersion;
+                Builder.Runtime = rtPath;
+            } else {
+                function setRuntime(rt) {
+                    runtimeSelection = rt.version;
+                    Builder.Runtime = rt.path;
+                }
+                let versionParts = ideVersion.split(".");
+                for (let vn = versionParts.length; --vn >= 2;) {
+                    let versionPrefix = versionParts.slice(0, vn).join(".") + ".";
+                    let rt = findClosestRuntime(versionPrefix);
+                    if (rt) {
+                        setRuntime(rt);
+                        break;
+                    }
+                }
+                if (runtimeSelection) {
+                    // OK!
+                } else if (/^2022\./.test(ideVersion) && !isLTS) {
+                    // if it's 2022.x, try 2023.x?
+                    let rt = findClosestRuntime("2023.", true);
+                    if (rt) setRuntime(rt);
+                } else if (/^2\.3\./.test(ideVersion)) {
+                    // if it's 2.3.x, try LTS?
+                    let rt = findClosestRuntime("2022.0.");
+                    if (rt) setRuntime(rt);
+                }
+            }
+            if (runtimeSelection == null) {
+                return abort(`Could not find a good runtime match! Try picking one manually.`);
+            } else {
+                output.write(`Best-matching runtime is ${runtimeSelection}`);
+            }
         }
         //
         let appName = (() => {
