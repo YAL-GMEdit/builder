@@ -297,90 +297,7 @@ class BuilderCompile {
                 } else pair.value = value;
             }
             if (isWindows && x64flag != null) iniAdd("Windows", "Usex64", x64flag ? "True" : "False");
-            // collecting extension options is a little messy but what can you do
-            for (let resName of extensionNames) {
-                let res = project.yyResources[resName];
-                let id = res.id;
-                let extName = id.name;
-                let extRel = id.path;
-                if (extRel == null || !extRel.startsWith("extensions/")) continue;
-                let optRel = "options/extensions/" + id.name + ".json";
-                if (!project.existsSync(optRel)) continue;
-                try {
-                    let ext = project.readYyFileSync(extRel);
-                    let optRoot = project.readYyFileSync(optRel);
-                    let configurables = optRoot.configurables;
-                    // collect files with PreGraphicsInitialisation...
-                    for (let file of ext.files) {
-                        let func = file.functions.filter(q => q.name == "PreGraphicsInitialisation")[0];
-                        if (func == null) continue;
-                        let aliases = [file.filename];
-                        for (let proxy of file.ProxyFiles) aliases.push(proxy.name);
-                        let PathTools = $gmedit["haxe.io.Path"];
-                        if (isWindows) {
-                            aliases = aliases.filter(name => {
-                                return PathTools.extension(name).toLowerCase() == "dll";
-                            });
-                        } else {
-                            aliases = aliases.filter(name => {
-                                return PathTools.extension(name).toLowerCase() != "dll";
-                            });
-                        }
-                        if (aliases.length > 0) iniAdd(extName, "PreGraphicsInitFile", aliases.join("|"));
-                    }
-                    for (let optDef of ext.options) {
-                        if (optDef.optType == 5) continue; // label!
-                        
-                        let optGUID = optDef.guid;
-                        let optVal = configurables[optGUID];
-                        if (optVal != null
-                            && typeof(optVal) == "object"
-                            && optVal.Default != null
-                        ) optVal = optVal.Default.value;
-                        optVal ??= optDef.defaultValue;
-                        if (optVal == null) continue;
-                        
-                        if (optDef.optType == 4) { // path!
-                            if (!path.isAbsolute(optVal)) {
-                                optVal = path.normalize(path.join(project.dir, optVal));
-                            }
-                        }
-                        
-                        env[`YYEXTOPT_${extName}_${optDef.name}`] = optVal;
-                        if (optDef.exportToINI) iniAdd(extName, optDef.name, optVal);
-                    }
-                } catch (e) {
-                    console.error(`Error while getting options for ${id.name}:`, e);
-                }
-            }
-            //
-            try {
-                let optMain = project.readYyFileSync("options/main/options_main.yy");
-                for (let key in optMain) {
-                    //if (!key.startsWith("option_")) continue;
-                    env["YYMAIN_" + key] = optMain[key];
-                }
-            } catch (e) {
-                console.error("Error while getting main options:", e);
-            }
-            // write the ini file:
-            if (iniSections.length > 0) {
-                let iniLines = [];
-                for (let section of iniSections) {
-                    iniLines.push("[" + section.name + "]");
-                    if (section.name == "Steamworks") {
-                        let sdkPair = section.pairs.filter((p) => p.key == "SteamSDK")[0];
-                        if (sdkPair) sdkPair.value = sdkPair.value.split("\\\\").join("\\");
-                    }
-                    for (let pair of section.pairs) {
-                        iniLines.push(pair.key + "=" + pair.value);
-                    }
-                }
-                iniLines.push("");
-                if (!Electron_FS.existsSync(Builder.Outpath)) Electron_FS.mkdirSync(Builder.Outpath);
-                Electron_FS.writeFileSync(optionsIniPath, iniLines.join("\r\n"));
-            }
-            //
+            // baseline:
             env["YYPLATFORM_name"] = targetMachineFriendly;
             try {
                 let platName = targetMachine;
@@ -427,6 +344,94 @@ class BuilderCompile {
             //
             //console.log(env);
             Object.assign(env, process.env);
+            // collecting extension options is a little messy but what can you do
+            for (let resName of extensionNames) {
+                let res = project.yyResources[resName];
+                let id = res.id;
+                let extName = id.name;
+                let extRel = id.path;
+                if (extRel == null || !extRel.startsWith("extensions/")) continue;
+                let optRel = "options/extensions/" + id.name + ".json";
+                if (!project.existsSync(optRel)) continue;
+                try {
+                    let ext = project.readYyFileSync(extRel);
+                    let optRoot = project.readYyFileSync(optRel);
+                    let configurables = optRoot.configurables;
+                    // collect files with PreGraphicsInitialisation...
+                    for (let file of ext.files) {
+                        let func = file.functions.filter(q => q.name == "PreGraphicsInitialisation")[0];
+                        if (func == null) continue;
+                        let aliases = [file.filename];
+                        for (let proxy of file.ProxyFiles) aliases.push(proxy.name);
+                        let PathTools = $gmedit["haxe.io.Path"];
+                        if (isWindows) {
+                            aliases = aliases.filter(name => {
+                                return PathTools.extension(name).toLowerCase() == "dll";
+                            });
+                        } else {
+                            aliases = aliases.filter(name => {
+                                return PathTools.extension(name).toLowerCase() != "dll";
+                            });
+                        }
+                        if (aliases.length > 0) iniAdd(extName, "PreGraphicsInitFile", aliases.join("|"));
+                    }
+                    for (let optDef of ext.options) {
+                        if (optDef.optType == 5) continue; // label!
+                        
+                        let optGUID = optDef.guid;
+                        let optVal = configurables[optGUID];
+                        if (optVal != null
+                            && typeof(optVal) == "object"
+                            && optVal.Default != null
+                        ) optVal = optVal.Default.value;
+                        optVal ??= optDef.defaultValue;
+                        if (optVal == null) continue;
+                        // variables:
+                        optVal = optVal.replace(/%(\w+)%/g, (mt, name) => {
+                            return env[name] ?? mt;
+                        });
+                        
+                        if (optDef.optType == 4) { // path!
+                            if (!path.isAbsolute(optVal)) {
+                                optVal = path.normalize(path.join(project.dir, optVal));
+                            }
+                        }
+                        
+                        env[`YYEXTOPT_${extName}_${optDef.name}`] = optVal;
+                        if (optDef.exportToINI) iniAdd(extName, optDef.name, optVal);
+                    }
+                } catch (e) {
+                    console.error(`Error while getting options for ${id.name}:`, e);
+                }
+            }
+            //
+            try {
+                let optMain = project.readYyFileSync("options/main/options_main.yy");
+                for (let key in optMain) {
+                    //if (!key.startsWith("option_")) continue;
+                    env["YYMAIN_" + key] = optMain[key];
+                }
+            } catch (e) {
+                console.error("Error while getting main options:", e);
+            }
+            // write the ini file:
+            if (iniSections.length > 0) {
+                let iniLines = [];
+                for (let section of iniSections) {
+                    iniLines.push("[" + section.name + "]");
+                    if (section.name == "Steamworks") {
+                        let sdkPair = section.pairs.filter((p) => p.key == "SteamSDK")[0];
+                        if (sdkPair) sdkPair.value = sdkPair.value.split("\\\\").join("\\");
+                    }
+                    for (let pair of section.pairs) {
+                        iniLines.push(pair.key + "=" + pair.value);
+                    }
+                }
+                iniLines.push("");
+                if (!Electron_FS.existsSync(Builder.Outpath)) Electron_FS.mkdirSync(Builder.Outpath);
+                Electron_FS.writeFileSync(optionsIniPath, iniLines.join("\r\n"));
+            }
+            //
             runUserCommandStep_env = env;
         }
         /** @returns {bool} trouble */
