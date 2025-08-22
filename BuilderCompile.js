@@ -91,7 +91,7 @@ class BuilderCompile {
                         for (let i = 0; i < n; i++) {
                             const av = an[i] ?? 0;
                             const bv = bn[i] ?? 0;
-                            const d = bv - av;
+                            let d = bv - av;
                             if (oldest) d = -d;
                             if (d != 0) return d;
                         }
