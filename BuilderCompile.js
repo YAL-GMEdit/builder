@@ -314,6 +314,7 @@ class BuilderCompile {
         let outputPath = `${Builder.Outpath}/${Builder.Name}.${Builder.Extension}`;
         let optionsIniPath = fixSlashes(Builder.Outpath + "/options.ini");
         
+        const runtimePath = fixSlashes(Builder.Runtime);
         const compilerArgs = [
             `/compile`,
             `/majorv=1`, // /mv
@@ -325,7 +326,7 @@ class BuilderCompile {
             `/gamename=${Name}`, // /gn spaces/etc. will be replaced automatically
             `/TempDir=${fixSlashes(Temporary)}`, // /td
             `/CacheDir=${fixSlashes(Builder.Cache)}`, // /cd
-            `/runtimePath=${fixSlashes(Builder.Runtime)}`, // /rtp
+            `/runtimePath=${fixSlashes(runtimePath)}`, // /rtp
             `/zpuf=${fixSlashes(Userpath)}`, // GMS2 user folder
             `/machine=${targetMachine}`, // /m
             `/target=${targetMask}`, // /tgt
@@ -341,10 +342,19 @@ class BuilderCompile {
             `/bt=run`, // build type
             `/runtime=vm`, // "vm" or "yyc"
         ];
-        if (!/^runtime-[27]\./.test(runtimeSelection)) {
+        let runtimeYear = ((ver) => {
+            let mt = /^runtime-(\d+)\./.exec(ver);
+            return mt ? parseInt(mt[1]) : 0;
+        })(runtimeSelection);
+        if (runtimeYear >= 10) {
             // not 2.x/7.x - in other words, 2022+
             compilerArgs.push(`/debug`);
             compilerArgs.push(`/ffe=${ffe}`);
+        }
+        if (runtimeYear >= 2026) {
+            const prefabsPath = path.resolve(runtimePath, "../../../Prefabs");
+            console.log("prefabsPath", prefabsPath);
+            compilerArgs.push(`/prefabs=${fixSlashes(prefabsPath)}`)
         }
         if (x64flag != null) compilerArgs.push("/64bitgame=" + x64flag);
         compilerArgs.push(project.path);

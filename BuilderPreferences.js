@@ -22,7 +22,17 @@ class BuilderPreferences {
 				location: process.env.ProgramData + "/GameMakerStudio2-Beta/Cache/runtimes/",
 				runtimeList: [],
 				selection: ""
-			}
+			},
+			LTS: {
+				location: process.env.ProgramData + "/GameMakerStudio2-LTS/Cache/runtimes/",
+				runtimeList: [],
+				selection: ""
+			},
+			LTS2026: {
+				location: process.env.ProgramData + "/GameMakerStudio2-LTS2026/Cache/runtimes/",
+				runtimeList: [],
+				selection: ""
+			},
 		}
 	};
 	
